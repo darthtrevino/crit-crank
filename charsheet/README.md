@@ -24,7 +24,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 | Ⓑ | Cycle the next d20 roll: normal → advantage → disadvantage |
 | Crank / Ⓐ / Ⓑ on a Status counter | Adjust it (crank clockwise = up; Ⓐ −1, Ⓑ +1) |
 | On the Dice page | Use "Build a pool": crank, Ⓐ or Ⓑ on a die row (d4–d20) or the Modifier changes its count; select "Roll pool" to roll it all (e.g. 2d6+1d4+2), Ⓑ there clears the pool |
-| Menu → Hero | Switch character, prebuilt or imported (remembered between launches) |
+| Menu → Hero | Switch character, prebuilt or imported (remembered between launches). Each hero keeps its own page, selected row, d20 mode, pending crit, last cast and dice pool |
 | Status → Short Rest (crank to confirm) | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
 | Status → Long Rest (crank to confirm) | Full HP, all spell slots and features, regain half your Hit Dice (min 1) |
 | Menu (pause) | The left side of the pause screen explains the selected row: what the ability, save, skill, spell, feature or resource does, and how its bonus adds up (e.g. "+5 = STR +3, prof +2") |
@@ -39,6 +39,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 - Advantage/disadvantage resets after each d20 roll
 - Halfling Lucky (Pip) automatically rerolls natural 1s on d20 rolls
 - Status page tracks current HP, Hit Dice, spell slots, and limited-use features per character (saved between launches)
+- At 0 HP the Status page shows a Dying section with a Death Save roll and success/failure counters. Death saves are tallied automatically (nat 1 = two failures, nat 20 = back to 1 HP); healing or a long rest clears them
 - Rolling a spell spends a slot of its level and rolling a limited feature spends a use. Multi-roll actions (attack + damage) spend once per cast. If none are left you get a warning, but the roll still happens.
 - Second Wind and Spend Hit Die heal your current HP when the dice land. Spend Hit Die needs a Hit Die left and missing HP.
 - Dice page: build a custom pool (up to 12 dice plus a ±20 modifier, saved between launches), plus quick rolls: d4–d100, 2d6, 4d6 drop lowest, 8d6
