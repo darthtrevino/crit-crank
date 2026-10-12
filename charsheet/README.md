@@ -35,7 +35,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 - Ability checks, saving throws, skills (● proficient, ◉ expertise), initiative, death saves
 - Attack rolls, then a separate damage roll for each attack
 - A critical hit on an attack doubles the damage dice of the next damage rolls (marked `x2`) until the next d20 roll. Brenna crits on a 19–20 (Champion).
-- A natural 20 on any d20 roll outside the Dice page sounds a DJ air horn; a natural 1 gets a sad trombone
+- A natural 20 on any d20 roll outside the Dice page sounds a celebratory horn; a natural 1 gets a sad trombone
 - Advantage/disadvantage resets after each d20 roll
 - Halfling Lucky (Pip) automatically rerolls natural 1s on d20 rolls
 - Status page tracks current HP, Hit Dice, spell slots, and limited-use features per character (saved between launches)

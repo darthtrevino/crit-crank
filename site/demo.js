@@ -85,12 +85,12 @@
 		g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 		o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
 	}
-	function airHorn() {
+	function fanfare() {
 		const t = audio().currentTime;
-		// DJ air horn: three quick BRAPs then a long blast on F#5
-		[[0, 0.11], [0.15, 0.11], [0.3, 0.11], [0.48, 0.9]].forEach(([d, len]) =>
-			[[740, "square"], [745, "sawtooth"], [1480, "sawtooth"]].forEach(([f, type]) =>
-				tone(t + d, f, len, type, 0.035, len > 0.5 ? f * 0.94 : undefined)));
+		// Celebratory horn: BWA-BWA-BWAAAAA on a brassy Bb major chord
+		[[0, 0.13], [0.19, 0.13], [0.38, 0.9]].forEach(([d, len]) =>
+			[233.1, 234.4, 293.7, 349.2, 466.2].forEach((f) =>
+				tone(t + d, f, len, "sawtooth", 0.03)));
 	}
 	function sadTrombone() {
 		const t = audio().currentTime;
@@ -127,9 +127,9 @@
 		totalEl.textContent = face + r.bonus;
 		noteEl.className = "note";
 		if (r.d20 && face === 20) {
-			noteEl.textContent = "NATURAL 20!"; noteEl.className = "note badge pop"; airHorn();
+			noteEl.textContent = "NATURAL 20!"; noteEl.className = "note badge pop"; fanfare();
 		} else if (r.attack && face >= CRIT) {
-			noteEl.textContent = "CRITICAL HIT"; noteEl.className = "note badge pop"; airHorn();
+			noteEl.textContent = "CRITICAL HIT"; noteEl.className = "note badge pop"; fanfare();
 		} else if (r.d20 && face === 1) {
 			noteEl.textContent = "natural 1…"; sadTrombone();
 		} else {
