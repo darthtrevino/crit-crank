@@ -1,6 +1,7 @@
-name=charsheet
+name=Crit Crank
 author=Chris Trevino
-description=A D&D character sheet with crank-powered dice.
+description=A 5e character sheet with crank-powered dice.
 bundleID=com.christrevino.charsheet
 version=0.1
 buildNumber=1
+imagePath=launcher

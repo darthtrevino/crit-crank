@@ -1,6 +1,6 @@
 # charsync
 
-Brings D&D Beyond characters into [charsheet](../charsheet) on a Playdate. It's a command-line tool for macOS, Windows and Linux.
+Brings D&D Beyond characters into [Crit Crank](../charsheet) on a Playdate. It's a command-line tool for macOS, Windows and Linux.
 
 > D&D Beyond has no public API. charsync reads the same unofficial JSON feed the D&D Beyond site uses, which works only for characters whose privacy is set to **Public**. It may break if D&D Beyond changes the feed. Use it for your own characters.
 
@@ -14,14 +14,14 @@ cargo build --release   # -> target/release/charsync
 
 ## Use
 
-Open charsheet on the Playdate, plug it in over USB, unlock it, then:
+Open Crit Crank on the Playdate, plug it in over USB, unlock it, then:
 
 ```sh
 charsync import 27935516                                     # by id
 charsync import https://www.dndbeyond.com/characters/27935516 # or URL
 ```
 
-charsync launches charsheet if it isn't already open. Other commands:
+charsync launches Crit Crank if it isn't already open. Other commands:
 
 | Command | What it does |
 | --- | --- |
@@ -42,7 +42,7 @@ Utility spells and features with nothing to roll are left out.
 
 ## How it talks to the Playdate
 
-The Playdate's USB serial console accepts `msg <text>`, which charsheet receives in `playdate.serialMessageReceived`. charsheet replies with `print()`. The compact character JSON goes over in acknowledged chunks of 180 bytes or fewer:
+The Playdate's USB serial console accepts `msg <text>`, which Crit Crank receives in `playdate.serialMessageReceived`. Crit Crank replies with `print()`. The compact character JSON goes over in acknowledged chunks of 180 bytes or fewer:
 
 ```
 msg cs ping              -> cs pong 1

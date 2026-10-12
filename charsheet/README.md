@@ -1,4 +1,6 @@
-# charsheet
+# Crit Crank
+
+![Crit Crank](source/launcher/card.png)
 
 A D&D 5e character sheet for Playdate. Pick a stat, attack, or spell and spin the crank to roll the dice.
 
@@ -42,7 +44,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 
 ## Importing D&D Beyond characters
 
-The [`charsync`](../charsync) desktop tool (Rust, macOS/Windows/Linux) downloads a **public** D&D Beyond character, converts it, and sends it to the Playdate over USB while charsheet is running:
+The [`charsync`](../charsync) desktop tool (Rust, macOS/Windows/Linux) downloads a **public** D&D Beyond character, converts it, and sends it to the Playdate over USB while Crit Crank is running:
 
 ```sh
 cd charsync && cargo build --release
@@ -52,6 +54,8 @@ cd charsync && cargo build --release
 The hero is selected straight away and stays in the Hero menu. Importing the same character again updates it (its HP, slots and uses are kept). See [charsync/README.md](../charsync/README.md) for the other options (Simulator, USB disk mode, removing a hero).
 
 ## Code layout
+
+- `source/launcher/`: launcher card and icon (regenerate with `tools/make_launcher_art.py`, needs Pillow)
 
 - `source/characters.lua`: prebuilt characters (data only; add new ones here)
 - `source/importer.lua`: imported characters (validation, storage) and the USB serial import protocol
