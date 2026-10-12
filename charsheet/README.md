@@ -34,7 +34,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 - Ability checks, saving throws, skills (● proficient, ◉ expertise), initiative, death saves
 - Attack rolls, then a separate damage roll for each attack
 - A critical hit on an attack doubles the damage dice of the next damage rolls (marked `x2`) until the next d20 roll. Brenna crits on a 19–20 (Champion).
-- A natural 20 on any d20 roll outside the Dice page sounds an air horn; a natural 1 gets a sad trombone
+- A natural 20 on any d20 roll outside the Dice page sounds a DJ air horn; a natural 1 gets a sad trombone
 - Advantage/disadvantage resets after each d20 roll
 - Halfling Lucky (Pip) automatically rerolls natural 1s on d20 rolls
 - Status page tracks current HP, Hit Dice, spell slots, and limited-use features per character (saved between launches)
@@ -66,3 +66,7 @@ The hero is selected straight away and stays in the Hero menu. Importing the sam
 - `source/rules.lua`: rule text for the pause screen
 - `source/ui.lua`: drawing (header, tabs, list, dice tray, toasts, pause-screen card)
 - `source/main.lua`: input, crank roll logic, resource spending, rests, sound, saving, and the main loop
+
+## License
+
+MIT. See [LICENSE](../LICENSE). The fonts in `source/fonts/` belong to Panic and are excluded from the MIT grant. They are used under the Playdate SDK License (see [source/fonts/README.md](source/fonts/README.md)).
