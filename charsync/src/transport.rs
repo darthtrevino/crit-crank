@@ -28,7 +28,11 @@ pub fn list_ports() -> Result<Vec<(String, bool)>> {
 }
 
 pub fn find_playdate() -> Result<String> {
-    let mut found: Vec<String> = list_ports()?.into_iter().filter(|(_, pd)| *pd).map(|(n, _)| n).collect();
+    let mut found: Vec<String> = list_ports()?
+        .into_iter()
+        .filter(|(_, pd)| *pd)
+        .map(|(n, _)| n)
+        .collect();
     // macOS lists both /dev/tty.* and /dev/cu.*; cu doesn't wait for carrier
     found.sort_by_key(|n| !n.contains("/cu."));
     found.into_iter().next().context(
@@ -48,7 +52,11 @@ impl Device {
             .timeout(Duration::from_millis(50))
             .open()
             .with_context(|| format!("opening {name} (is pdutil or the Simulator using it?)"))?;
-        Ok(Device { port, pending: String::new(), verbose: false })
+        Ok(Device {
+            port,
+            pending: String::new(),
+            verbose: false,
+        })
     }
 
     fn send(&mut self, line: &str) -> Result<()> {
@@ -105,7 +113,9 @@ impl Device {
 
     pub fn ping(&mut self) -> Result<bool> {
         self.drain();
-        Ok(matches!(self.request("ping", Duration::from_millis(1500))?, Some(r) if r.starts_with("cs pong")))
+        Ok(
+            matches!(self.request("ping", Duration::from_millis(1500))?, Some(r) if r.starts_with("cs pong")),
+        )
     }
 
     /// Pings the game, launching it first if it isn't running.
@@ -125,7 +135,9 @@ impl Device {
                 return Ok(());
             }
         }
-        bail!("charsheet didn't answer. Open it on the Playdate (it must be installed at {GAME_PATH}) and try again")
+        bail!(
+            "charsheet didn't answer. Open it on the Playdate (it must be installed at {GAME_PATH}) and try again"
+        )
     }
 
     pub fn push(&mut self, json: &str) -> Result<String> {
@@ -144,14 +156,17 @@ impl Device {
     }
 
     pub fn remove(&mut self, key: &str) -> Result<()> {
-        self.expect(&format!("remove {key}"), "cs removed ").map(|_| ())
+        self.expect(&format!("remove {key}"), "cs removed ")
+            .map(|_| ())
     }
 
     fn expect(&mut self, msg: &str, want: &str) -> Result<String> {
         for _ in 0..3 {
             match self.request(msg, Duration::from_secs(2))? {
                 Some(r) if r.starts_with(want) => return Ok(r),
-                Some(r) if r.starts_with("cs err") => bail!("Playdate: {}", r.trim_start_matches("cs err ")),
+                Some(r) if r.starts_with("cs err") => {
+                    bail!("Playdate: {}", r.trim_start_matches("cs err "))
+                }
                 _ => continue, // lost or stale reply: resend (the game re-acks duplicates)
             }
         }
@@ -209,7 +224,9 @@ pub fn find_mount() -> Option<PathBuf> {
     if cfg!(windows) {
         candidates.extend((b'D'..=b'Z').map(|l| PathBuf::from(format!("{}:\\", l as char))));
         // only accept a drive letter that has the Playdate's System folder too
-        return candidates.into_iter().find(|p| looks_right(p) && p.join("System").is_dir());
+        return candidates
+            .into_iter()
+            .find(|p| looks_right(p) && p.join("System").is_dir());
     }
     candidates.into_iter().find(|p| looks_right(p))
 }
@@ -243,15 +260,25 @@ pub fn eject(mount: &Path) -> Result<()> {
             sleep(Duration::from_secs(2));
         }
         let status = if cfg!(target_os = "macos") {
-            std::process::Command::new("diskutil").arg("eject").arg(mount).stderr(std::process::Stdio::null()).status()
+            std::process::Command::new("diskutil")
+                .arg("eject")
+                .arg(mount)
+                .stderr(std::process::Stdio::null())
+                .status()
         } else {
-            std::process::Command::new("umount").arg(mount).stderr(std::process::Stdio::null()).status()
+            std::process::Command::new("umount")
+                .arg(mount)
+                .stderr(std::process::Stdio::null())
+                .status()
         };
         if matches!(status, Ok(s) if s.success()) {
             return Ok(());
         }
     }
-    bail!("couldn't eject {}; eject it manually and press A on the Playdate", mount.display())
+    bail!(
+        "couldn't eject {}; eject it manually and press A on the Playdate",
+        mount.display()
+    )
 }
 
 // ---------------------------------------------------------------- data folder
@@ -266,7 +293,10 @@ pub fn simulator_disk() -> Result<PathBuf> {
     if let Ok(p) = std::env::var("PLAYDATE_SDK_PATH") {
         roots.push(PathBuf::from(p));
     }
-    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).map(PathBuf::from).ok();
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map(PathBuf::from)
+        .ok();
     if let Some(home) = &home {
         // ~/.Playdate/config holds "SDKRoot <path>" on Linux/Windows installs
         if let Ok(cfg) = std::fs::read_to_string(home.join(".Playdate").join("config")) {
@@ -315,7 +345,8 @@ pub fn remove_import(dir: &Path, key: &str) -> Result<bool> {
 fn read_imports(path: &Path) -> Result<Vec<Value>> {
     match std::fs::read_to_string(path) {
         Ok(s) => {
-            let v: Value = serde_json::from_str(&s).with_context(|| format!("{} is corrupt", path.display()))?;
+            let v: Value = serde_json::from_str(&s)
+                .with_context(|| format!("{} is corrupt", path.display()))?;
             Ok(v["characters"].as_array().cloned().unwrap_or_default())
         }
         Err(e) if e.kind() == ErrorKind::NotFound => Ok(Vec::new()),
@@ -339,7 +370,10 @@ mod tests {
         let parts = chunk(&s);
         assert_eq!(parts.concat(), s);
         for p in &parts[..parts.len() - 1] {
-            assert!(p.len() <= CHUNK && !p.ends_with(' ') && !p.starts_with(' '), "{p:?}");
+            assert!(
+                p.len() <= CHUNK && !p.ends_with(' ') && !p.starts_with(' '),
+                "{p:?}"
+            );
         }
     }
 }

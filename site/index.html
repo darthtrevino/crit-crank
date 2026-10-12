@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Crit Crank: a crank-powered 5e character sheet for Playdate</title>
+	<meta name="description" content="Crit Crank is a D&amp;D 5e character sheet for the Playdate. Pick a stat, turn the crank, and roll 3D dice.">
+	<meta property="og:title" content="Crit Crank">
+	<meta property="og:description" content="A 5e character sheet for Playdate with crank-powered 3D dice.">
+	<meta property="og:image" content="assets/card.png">
+	<meta name="theme-color" content="#ffc500">
+	<link rel="icon" href="assets/icon.png">
+	<link rel="stylesheet" href="style.css">
+	<script src="demo.js" defer></script>
+</head>
+<body>
+	<a class="skip" href="#main">Skip to content</a>
+	<header class="hero">
+		<img class="pixel card" src="assets/card.png" width="350" height="155" alt="Crit Crank logo: a d20 with a crank handle">
+		<h1>Your 5e character sheet, on a crank.</h1>
+		<p class="lede">Crit Crank turns a <a href="https://play.date">Playdate</a> into a D&amp;D&nbsp;5e character sheet. Pick an ability, save, skill or attack, then turn the crank to roll real 3D dice.</p>
+		<div class="cta">
+			<a class="btn primary" href="crit-crank.pdx.zip" download>Download for Playdate</a>
+			<a class="btn" href="https://github.com/darthtrevino/crit-crank">View on GitHub</a>
+		</div>
+	</header>
+
+	<main id="main">
+		<section class="demo" aria-labelledby="demo-title">
+			<h2 id="demo-title">Try it</h2>
+			<p class="hint">Drag the crank, scroll over it, or press <kbd>Space</kbd> to roll. Use the <kbd>↑</kbd><kbd>↓</kbd> keys to pick a row and <kbd>←</kbd><kbd>→</kbd> to switch pages. Sound is on, so listen for a natural 20.</p>
+			<div class="device">
+				<div class="screen" id="screen" role="application" aria-label="Crit Crank demo screen" tabindex="0">
+					<div class="hdr"><span><b>Brenna Stoutheart</b> <small>Lv3 Fighter</small></span><span>AC 18 HP 31/31 25ft</span></div>
+					<div class="tabs" id="tabs"></div>
+					<div class="body">
+						<ul class="list" id="list"></ul>
+						<div class="tray" aria-live="polite">
+							<div class="tray-title" id="trayTitle"></div>
+							<div class="tray-spec" id="traySpec"></div>
+							<svg class="die" id="die" viewBox="-50 -50 100 100" aria-hidden="true"></svg>
+							<div class="total" id="total"></div>
+							<div class="note" id="note">Crank to roll</div>
+						</div>
+					</div>
+					<div class="ftr"><span>◀▶ page ▲▼ select ⟳ roll</span><span>Ⓑ normal</span></div>
+				</div>
+				<div class="controls">
+					<div class="dpad" aria-label="D-pad">
+						<button class="up" data-key="ArrowUp" aria-label="Up">▲</button>
+						<button class="left" data-key="ArrowLeft" aria-label="Left">◀</button>
+						<button class="right" data-key="ArrowRight" aria-label="Right">▶</button>
+						<button class="down" data-key="ArrowDown" aria-label="Down">▼</button>
+					</div>
+					<div class="ab">
+						<button data-key="b" aria-label="B button">B</button>
+						<button data-key=" " aria-label="A button: roll">A</button>
+					</div>
+				</div>
+				<div class="crank" id="crank" role="slider" tabindex="0" aria-label="Crank: drag or use arrow keys to roll" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0">
+					<div class="arm" id="arm"><div class="knob"></div></div>
+				</div>
+			</div>
+		</section>
+
+		<section aria-labelledby="features-title">
+			<h2 id="features-title">Everything at the table, on 400×240 pixels</h2>
+			<div class="grid">
+				<figure>
+					<img class="pixel" src="assets/nat20.gif" width="400" height="240" alt="A d20 tumbling on screen and landing on a natural 20, with a NATURAL 20 badge">
+					<figcaption><b>Crank-powered 3D dice.</b> Wind up with the crank and stop to let them land. A natural 20 plays an air horn and a natural 1 plays a sad trombone.</figcaption>
+				</figure>
+				<figure>
+					<img class="pixel" src="assets/skills.png" width="400" height="240" alt="Skills page showing proficiency and expertise marks">
+					<figcaption><b>The whole sheet.</b> Abilities, saves, all 18 skills with proficiency and expertise, initiative, spell DC and passive Perception.</figcaption>
+				</figure>
+				<figure>
+					<img class="pixel" src="assets/actions.png" width="400" height="240" alt="Actions page with weapons and cantrips">
+					<figcaption><b>Attacks and spells.</b> Roll to hit, then damage. Crits double the dice, and spell slots are spent automatically.</figcaption>
+				</figure>
+				<figure>
+					<img class="pixel" src="assets/status.png" width="400" height="240" alt="Status page tracking hit points, hit dice and spell slots">
+					<figcaption><b>Resources and rests.</b> Track HP, Hit Dice, spell slots and limited features. Take a short or long rest from the menu.</figcaption>
+				</figure>
+				<figure>
+					<img class="pixel" src="assets/pool_roll.png" width="400" height="240" alt="Dice page with a 2d6+d4+2 pool rolled for 13">
+					<figcaption><b>Dice pools.</b> Build any pool, like 2d6+1d4+2, and roll it together.</figcaption>
+				</figure>
+				<figure>
+					<img class="pixel" src="assets/abilities.png" width="400" height="240" alt="Abilities page for Brenna Stoutheart">
+					<figcaption><b>Four prebuilt heroes,</b> a fighter, a wizard, a rogue and a cleric. Or import your own.</figcaption>
+				</figure>
+			</div>
+		</section>
+
+		<section class="rules" aria-labelledby="rules-title">
+			<h2 id="rules-title">Rules at a pause</h2>
+			<p>Press Menu and the left half of the pause screen explains the row you have selected: what it does and how its bonus adds up.</p>
+			<div class="pause-row">
+				<div class="pause"><img class="pixel" src="assets/pause_dex.png" width="200" height="240" alt="Pause card for Dexterity with its description"><ul class="sysmenu" aria-hidden="true"><li>hero</li><li>short rest</li><li>long rest</li><li class="sep">volume</li><li>home</li></ul></div>
+				<div class="pause"><img class="pixel" src="assets/pause_firebolt.png" width="200" height="240" alt="Pause card for Fire Bolt with its attack bonus breakdown"><ul class="sysmenu" aria-hidden="true"><li>hero</li><li>short rest</li><li>long rest</li><li class="sep">volume</li><li>home</li></ul></div>
+			</div>
+		</section>
+
+		<section aria-labelledby="sync-title">
+			<h2 id="sync-title">Bring your own character</h2>
+			<p><b>charsync</b> is a small command-line tool for Mac, Windows and Linux. It turns a public D&amp;D Beyond character into a Crit Crank hero and sends it to your Playdate over USB.</p>
+<pre><code>cd charsync
+cargo install --path .
+charsync import https://www.dndbeyond.com/characters/12345678</code></pre>
+			<p>It converts ability scores, saves, skills, HP, AC, spell slots, weapons, damage and healing spells, and limited-use features. Spell and feature descriptions show up on the pause screen too. See the <a href="https://github.com/darthtrevino/crit-crank/tree/main/charsync">charsync README</a>.</p>
+		</section>
+
+		<section aria-labelledby="install-title">
+			<h2 id="install-title">Install</h2>
+			<ol>
+				<li>Download <a href="crit-crank.pdx.zip" download>crit-crank.pdx.zip</a>.</li>
+				<li>Sideload it at <a href="https://play.date/account/sideload/">play.date/account/sideload</a>, or unzip it and copy <code>charsheet.pdx</code> into the <code>Games</code> folder in USB disk mode.</li>
+				<li>Or build it yourself with the <a href="https://play.date/dev/">Playdate SDK</a>: <code>cd charsheet &amp;&amp; make run</code>.</li>
+			</ol>
+		</section>
+	</main>
+
+	<footer>
+		<p>Crit Crank is a fan project. It is not affiliated with Panic, Wizards of the Coast or D&amp;D Beyond. Rule summaries are paraphrased from the 5e System Reference Document.</p>
+	</footer>
+</body>
+</html>

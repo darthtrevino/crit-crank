@@ -1,0 +1,55 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  PLAYDATE_SDK_VERSION: "3.1.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Playdate SDK
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/PlaydateSDK
+          key: playdate-sdk-linux-${{ env.PLAYDATE_SDK_VERSION }}
+      - name: Download Playdate SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/PlaydateSDK
+          curl -fsSL "https://download.panic.com/playdate_sdk/Linux/PlaydateSDK-${PLAYDATE_SDK_VERSION}.tar.gz" \
+            | tar -xz -C ~/PlaydateSDK --strip-components=1
+      - name: Build game and bundle into site
+        run: |
+          export PLAYDATE_SDK_PATH=~/PlaydateSDK
+          (cd charsheet && "$PLAYDATE_SDK_PATH/bin/pdc" source charsheet.pdx)
+          (cd charsheet && zip -qr ../site/crit-crank.pdx.zip charsheet.pdx)
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
