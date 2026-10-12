@@ -114,7 +114,13 @@ local function usePips(key, max)
 end
 
 -- getResource(key) -> cur, max
-function UI.drawList(page, sel, scroll, critPending, getResource)
+local function counterText(key, n)
+	if key == "bonus" then return n == 0 and "+0" or Dice.signed(n) end
+	return n == 0 and "-" or ("x" .. n)
+end
+
+-- getCounter(key) -> n
+function UI.drawList(page, sel, scroll, critPending, getResource, getCounter)
 	local rows = page.rows
 	local valueX = UI.LIST_W - 8
 	for vi = 1, UI.VISIBLE_ROWS do
@@ -161,6 +167,8 @@ function UI.drawList(page, sel, scroll, critPending, getResource)
 				else
 					value = cur .. "/" .. max
 				end
+			elseif row.kind == "counter" then
+				value = counterText(row.key, getCounter(row.key))
 			end
 			local valueW = pips and (pips[2] * PIP_GAP) or textW(valueFont, value or "")
 			local labelFont = row.indent and fonts.small or fonts.body
@@ -280,8 +288,28 @@ function UI.drawTray(t)
 		return
 	end
 
+	if row.kind == "counter" then
+		local n = t.getCounter(row.key)
+		drawText(fonts.big, counterText(row.key, n), TRAY_CX, y + 18, "center")
+		if t.preview then
+			drawText(fonts.small, fit(fonts.small, "Pool: " .. Dice.format(t.spec), TRAY_W), TRAY_CX, y + 56, "center")
+			drawDiceGrid(t.preview.dice, t.preview.bodies, y + 70, y + 136)
+		else
+			drawText(fonts.small, "Pool is empty", TRAY_CX, y + 90, "center")
+		end
+		drawText(fonts.small, "🎣 adjust", TRAY_CX, y + 140, "center")
+		drawText(fonts.small, "Ⓐ -1   Ⓑ +1", TRAY_CX, y + 158, "center")
+		return
+	end
+
 	local roll = t.roll
 	local spec = roll and roll.spec or t.spec
+	if row.pool and not roll and not spec then
+		drawText(fonts.small, "Pool is empty", TRAY_CX, y + 60, "center")
+		drawText(fonts.small, "Add dice with the", TRAY_CX, y + 90, "center")
+		drawText(fonts.small, "rows below ⬇️", TRAY_CX, y + 106, "center")
+		return
+	end
 	local tag
 	if roll and roll.crit then
 		tag = "CRITICAL x2"
@@ -351,6 +379,11 @@ function UI.drawFooter(mode, toast)
 		gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
 		drawText(fonts.small, fit(fonts.small, toast, UI.W - 12), UI.W / 2, UI.FOOTER_Y + 2, "center")
 		gfx.setImageDrawMode(gfx.kDrawModeCopy)
+		return
+	end
+	if mode == "pool" then
+		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, UI.FOOTER_Y + 2)
+		drawText(fonts.small, "Ⓑ clear", UI.W - 6, UI.FOOTER_Y + 2, "right")
 		return
 	end
 	if mode == "resource" then

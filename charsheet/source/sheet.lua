@@ -10,6 +10,7 @@
 --     actionKey: groups the rows of one action (attack + damage) into one cast
 --     selfHeal: apply the rolled total to current HP
 --   resource: { kind="resource", key, label, detail }  live tracked counter
+--   counter:  { kind="counter", key, label }  custom dice pool builder entry
 
 Sheet = {}
 
@@ -220,8 +221,21 @@ local function statusPage(c)
 	return { title = "STATUS", rows = rows }
 end
 
+-- Dice that can go into a custom pool, in row order.
+Sheet.POOL_SIDES = { 4, 6, 8, 10, 12, 20 }
+
 local function dicePage()
 	local rows = {}
+	rows[#rows + 1] = { kind = "header", label = "Build a pool" }
+	-- spec/value are filled in by main.lua from the current pool
+	rows[#rows + 1] = {
+		kind = "roll", label = "Roll pool", spec = Dice.parse("0"), rollKind = "pool", pool = true,
+	}
+	for _, s in ipairs(Sheet.POOL_SIDES) do
+		rows[#rows + 1] = { kind = "counter", key = "d" .. s, label = "d" .. s, indent = true }
+	end
+	rows[#rows + 1] = { kind = "counter", key = "bonus", label = "Modifier", indent = true }
+	rows[#rows + 1] = { kind = "header", label = "Quick rolls" }
 	local function add(label, expr, value)
 		local spec = Dice.parse(expr)
 		if expr == "1d20" then spec.check = true end

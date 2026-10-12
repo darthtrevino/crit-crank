@@ -21,6 +21,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 | Ⓐ | Quick roll (for when the crank is docked) |
 | Ⓑ | Cycle the next d20 roll: normal → advantage → disadvantage |
 | Crank / Ⓐ / Ⓑ on a Status counter | Adjust it (crank clockwise = up; Ⓐ −1, Ⓑ +1) |
+| On the Dice page | Use "Build a pool": crank, Ⓐ or Ⓑ on a die row (d4–d20) or the Modifier changes its count; select "Roll pool" to roll it all (e.g. 2d6+1d4+2), Ⓑ there clears the pool |
 | Menu → Hero | Switch prebuilt character (remembered between launches) |
 | Menu → Short Rest | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
 | Menu → Long Rest | Full HP, all spell slots and features, regain half your Hit Dice (min 1) |
@@ -35,7 +36,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 - Status page tracks current HP, Hit Dice, spell slots, and limited-use features per character (saved between launches)
 - Rolling a spell spends a slot of its level and rolling a limited feature spends a use. Multi-roll actions (attack + damage) spend once per cast. If none are left you get a warning, but the roll still happens.
 - Second Wind and Spend Hit Die heal your current HP when the dice land. Spend Hit Die needs a Hit Die left and missing HP.
-- Dice page: d4–d100, 2d6, 4d6 drop lowest, 8d6
+- Dice page: build a custom pool (up to 12 dice plus a ±20 modifier, saved between launches), plus quick rolls: d4–d100, 2d6, 4d6 drop lowest, 8d6
 
 ## Code layout
 

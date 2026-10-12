@@ -20,6 +20,8 @@ local SETTLE_FRAMES = 8  -- frames of stillness before the dice land
 local AUTO_FRAMES = 16   -- length of the Ⓐ-button quick roll
 local CRANK_ADJUST = 20  -- rotation per ±1 on a resource row
 local TOAST_FRAMES = 75
+local POOL_MAX_DICE = 12
+local POOL_BONUS = 20    -- modifier range is ±POOL_BONUS
 
 math.randomseed(pd.getSecondsSinceEpoch())
 pd.display.setRefreshRate(30)
@@ -40,6 +42,7 @@ local state = {
 	toast = nil,
 	toastFrames = 0,
 	dirty = false,
+	pool = {},      -- custom dice pool: d4..d20 counts and bonus
 }
 
 local crank = { windup = 0, tick = 0, idle = 0, adjust = 0 }
@@ -72,7 +75,7 @@ local function currentPage()
 end
 
 local function isSelectable(row)
-	return row and (row.kind == "roll" or row.kind == "resource")
+	return row and (row.kind == "roll" or row.kind == "resource" or row.kind == "counter")
 end
 
 local function firstSelectable(rows)
@@ -141,6 +144,84 @@ local function adjustResource(key, delta)
 	end
 end
 
+---------------------------------------------------------------- dice pool
+
+local function getCounter(key)
+	return state.pool[key] or 0
+end
+
+local function poolExpr()
+	local parts = {}
+	-- biggest dice first, like "2d6+1d4"
+	for i = #Sheet.POOL_SIDES, 1, -1 do
+		local s = Sheet.POOL_SIDES[i]
+		local n = getCounter("d" .. s)
+		if n > 0 then parts[#parts + 1] = n .. "d" .. s end
+	end
+	local expr = table.concat(parts, "+")
+	local b = getCounter("bonus")
+	if b ~= 0 then expr = expr .. Dice.signed(b) end
+	return expr
+end
+
+local function poolDiceCount()
+	local n = 0
+	for _, s in ipairs(Sheet.POOL_SIDES) do n += getCounter("d" .. s) end
+	return n
+end
+
+-- Push the pool into the "Roll pool" row.
+local function refreshPool()
+	for _, page in ipairs(state.pages) do
+		for _, row in ipairs(page.rows) do
+			if row.pool then
+				local expr = poolExpr()
+				row.spec = Dice.parse(expr == "" and "0" or expr)
+				if #row.spec.terms == 0 then
+					row.value = "empty"
+				else
+					local f = Dice.format(row.spec)
+					row.value = #f <= 11 and f or (poolDiceCount() .. " dice")
+				end
+			end
+		end
+	end
+end
+
+local function adjustCounter(key, delta)
+	local cur = getCounter(key)
+	local new
+	if key == "bonus" then
+		new = math.max(-POOL_BONUS, math.min(POOL_BONUS, cur + delta))
+	else
+		new = math.max(0, cur + delta)
+		if delta > 0 and poolDiceCount() >= POOL_MAX_DICE then
+			toast("Pool is full (" .. POOL_MAX_DICE .. " dice max)")
+			return
+		end
+	end
+	if new == cur then return end
+	state.pool[key] = new
+	state.dirty = true
+	tickSynth:playNote(delta > 0 and 900 or 500, 0.1, 0.02)
+	refreshPool()
+end
+
+local function clearPool()
+	state.pool = {}
+	state.dirty = true
+	refreshPool()
+	toast("Pool cleared")
+end
+
+local function adjustRow(row, delta)
+	if row.kind == "counter" then
+		adjustCounter(row.key, delta)
+	else
+		adjustResource(row.key, delta)
+	end
+end
+
 local function loadCharacter(i)
 	if state.res then state.allRes[state.charIndex] = state.res end
 	state.charIndex = i
@@ -148,6 +229,7 @@ local function loadCharacter(i)
 	state.allRes[i] = state.res
 	state.lastCast = nil
 	state.pages = Sheet.build(Characters[i])
+	refreshPool()
 	state.sel, state.scroll = {}, {}
 	for p, page in ipairs(state.pages) do
 		state.sel[p] = firstSelectable(page.rows)
@@ -228,6 +310,10 @@ end
 local function startRoll(auto)
 	local row = selectedRollRow()
 	if not row then return end
+	if row.pool and #row.spec.terms == 0 then
+		toast("Add dice to the pool first")
+		return
+	end
 	local cost = row.cost
 	if cost and cost.strict and row.selfHeal and state.res.hp >= character().hp then
 		toast("Already at full HP")
@@ -345,12 +431,12 @@ local function updateRoll()
 	end
 
 	local sel = selectedRow()
-	if sel and sel.kind == "resource" then
+	if sel and (sel.kind == "resource" or sel.kind == "counter") then
 		crank.adjust += change
 		while math.abs(crank.adjust) >= CRANK_ADJUST do
 			local dir = crank.adjust > 0 and 1 or -1
 			crank.adjust -= dir * CRANK_ADJUST
-			adjustResource(sel.key, dir)
+			adjustRow(sel, dir)
 		end
 		return
 	end
@@ -394,14 +480,14 @@ function pd.rightButtonDown() changePage(1) end
 
 local function resourceRow()
 	local row = selectedRow()
-	if row and row.kind == "resource" then return row end
+	if row and (row.kind == "resource" or row.kind == "counter") then return row end
 end
 
 function pd.AButtonDown()
 	if diceMoving() then return end
 	local r = resourceRow()
 	if r then
-		holdRepeat("a", function() adjustResource(r.key, -1) end)
+		holdRepeat("a", function() adjustRow(r, -1) end)
 		return
 	end
 	startRoll(true)
@@ -412,7 +498,13 @@ function pd.BButtonDown()
 	if diceMoving() then return end
 	local r = resourceRow()
 	if r then
-		holdRepeat("b", function() adjustResource(r.key, 1) end)
+		holdRepeat("b", function() adjustRow(r, 1) end)
+		return
+	end
+	local sel = selectedRow()
+	if sel and sel.pool then
+		state.roll = nil
+		clearPool()
 		return
 	end
 	local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
@@ -429,7 +521,7 @@ local function save()
 	-- string keys: the datastore is JSON
 	local res = {}
 	for i, r in pairs(state.allRes) do res[tostring(i)] = r end
-	pd.datastore.write({ charIndex = state.charIndex, resources = res })
+	pd.datastore.write({ charIndex = state.charIndex, resources = res, pool = state.pool })
 	state.dirty = false
 end
 
@@ -438,6 +530,11 @@ if saved and type(saved.resources) == "table" then
 	for k, r in pairs(saved.resources) do
 		local i = tonumber(k)
 		if i and Characters[i] then state.allRes[i] = r end
+	end
+end
+if saved and type(saved.pool) == "table" then
+	for k, v in pairs(saved.pool) do
+		if type(v) == "number" then state.pool[k] = math.floor(v) end
 	end
 end
 loadCharacter((saved and Characters[saved.charIndex or 0]) and saved.charIndex or 1)
@@ -508,18 +605,31 @@ function pd.update()
 
 	UI.drawHeader(c, state.res.hp)
 	UI.drawTabs(state.pages, state.page)
-	UI.drawList(page, state.sel[state.page], state.scroll[state.page], state.critPending, getResource)
+	UI.drawList(page, state.sel[state.page], state.scroll[state.page], state.critPending, getResource, getCounter)
 
 	local row = selectedRow()
 	local tray = {
 		row = row, mode = state.mode, critPending = state.critPending, roll = state.roll,
-		getResource = getResource,
+		getResource = getResource, getCounter = getCounter,
 	}
-	if row and row.kind == "roll" then
+	if row and row.kind == "roll" and not (row.pool and #row.spec.terms == 0) then
 		tray.spec = effectiveSpec(row)
 		tray.preview = previewFor(row)
+	elseif row and row.kind == "counter" then
+		local poolRow
+		for _, r in ipairs(page.rows) do if r.pool then poolRow = r end end
+		if #poolRow.spec.terms > 0 then
+			tray.spec = poolRow.spec
+			tray.preview = previewFor(poolRow)
+		end
 	end
 	UI.drawTray(tray)
-	UI.drawFooter((row and row.kind == "resource") and "resource" or state.mode, state.toast)
+	local footerMode = state.mode
+	if row and (row.kind == "resource" or row.kind == "counter") then
+		footerMode = "resource"
+	elseif row and row.pool then
+		footerMode = "pool"
+	end
+	UI.drawFooter(footerMode, state.toast)
 end
 
