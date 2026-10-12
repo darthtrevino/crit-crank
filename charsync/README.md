@@ -53,3 +53,7 @@ msg cs remove <key>      -> cs removed <key>
 ```
 
 Imports are stored in the game's `imports.json` datastore file, which is also what `--disk` and `--simulator` write to.
+
+## License
+
+MIT. See [LICENSE](../LICENSE).
