@@ -175,7 +175,6 @@
 	crank.addEventListener("keydown", (e) => {
 		if (["ArrowUp", "ArrowRight"].includes(e.key)) { e.preventDefault(); crankBy(30); }
 		else if (["ArrowDown", "ArrowLeft"].includes(e.key)) { e.preventDefault(); crankBy(-30); }
-		else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); quickRoll(); }
 	});
 
 	// --- buttons ---------------------------------------------------------------
@@ -188,7 +187,7 @@
 				page = (page + (key === "ArrowRight" ? 1 : pages.length - 1)) % pages.length;
 				sel = selectable()[0]; render(); break;
 			case "b": mode = (mode + 1) % modes.length; renderTray(); break;
-			case " ": case "a": case "Enter": quickRoll(); break;
+			case "a": quickRoll(); break;
 			default: return false;
 		}
 		return true;
