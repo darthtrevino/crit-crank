@@ -5,7 +5,7 @@
 [![CI](https://github.com/darthtrevino/crit-crank/actions/workflows/ci.yml/badge.svg)](https://github.com/darthtrevino/crit-crank/actions/workflows/ci.yml)
 [![Pages](https://github.com/darthtrevino/crit-crank/actions/workflows/pages.yml/badge.svg)](https://darthtrevino.github.io/crit-crank/)
 
-A D&D 5e character sheet for [Playdate](https://play.date). Pick an ability, save, skill, attack or spell, then **turn the crank to roll 3D dice**. It hits you with an air horn on a natural 20 and a sad trombone on a natural 1.
+A D&D 5e character sheet for [Playdate](https://play.date). Pick an ability, save, skill, attack or spell, then **turn the crank to roll 3D dice**. It hits you with a celebratory horn on a natural 20 and a sad trombone on a natural 1.
 
 **[Try the browser demo →](https://darthtrevino.github.io/crit-crank/)** · **[Read the manual →](https://darthtrevino.github.io/crit-crank/docs.html)**
 

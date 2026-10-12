@@ -77,34 +77,25 @@ export function landFor(result) {
 	else land(523, 0.35, 0.1);
 }
 
-// DJ air horn for natural 20s: BRAP-BRAP-BRAP-BRAAAAAP.
+// Celebratory horn for natural 20s: BWA-BWA-BWAAAAA, a brassy Bb major
+// chord on a stack of detuned saws.
+const HORN_FREQS = [233.1, 234.4, 293.7, 295.2, 349.2, 466.2];
 export function horn() {
 	const ctx = audio();
 	if (!ctx) return;
-	const shaper = ctx.createWaveShaper();
-	const curve = new Float32Array(256);
-	for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 2.5) * 0.6; }
-	shaper.curve = curve;
-	const hp = ctx.createBiquadFilter();
-	hp.type = "highpass";
-	hp.frequency.value = 700;
-	shaper.connect(hp).connect(master);
-	const voices = [[740, "square"], [744, "sawtooth"], [736, "sawtooth"], [742, "square"], [1480, "sawtooth"], [1485, "square"]];
-	const blast = (at, len, droop) => {
-		for (const [f, wave] of voices) {
-			const osc = note({ wave, freq: f, vol: 0.16, len, a: 0.006, d: 0.03, s: 0.9, r: 0.06, at, dest: shaper, vibrato: { rate: 38, depth: 0.012, wave: "triangle" } });
-			if (!osc) continue;
-			const t = ctx.currentTime + at;
-			osc.detune.setValueAtTime(-150, t);
-			osc.detune.linearRampToValueAtTime(0, t + 0.04);
-			if (droop) {
-				osc.detune.setValueAtTime(0, t + 0.7);
-				osc.detune.linearRampToValueAtTime(-700, t + len);
-			}
+	const lp = ctx.createBiquadFilter();
+	lp.type = "lowpass";
+	lp.frequency.value = 2600;
+	lp.Q.value = 1;
+	lp.connect(master);
+	const blast = (at, len) => {
+		for (const freq of HORN_FREQS) {
+			note({ wave: "sawtooth", freq, vol: 0.13, len, a: 0.015, d: 0.05, s: 0.85, r: 0.12, at, dest: lp });
 		}
 	};
-	for (let i = 0; i < 3; i++) blast(i * 0.15, 0.1);
-	blast(0.45, 1.1, true);
+	blast(0, 0.13);
+	blast(0.19, 0.13);
+	blast(0.38, 0.9);
 }
 
 // Sad trombone for natural 1s: wah wah wah waaaaah.
