@@ -9,6 +9,7 @@ permissions:
 
 env:
   PLAYDATE_SDK_VERSION: "3.1.2"
+  PLAYDATE_SDK_PATH: /home/runner/PlaydateSDK
 
 jobs:
   release:
@@ -35,7 +36,7 @@ jobs:
       - name: Build
         run: |
           cd charsheet
-          ~/PlaydateSDK/bin/pdc source charsheet.pdx
+          "$PLAYDATE_SDK_PATH/bin/pdc" source charsheet.pdx
           zip -qr ../crit-crank.pdx.zip charsheet.pdx
       - name: Publish release
         env:
