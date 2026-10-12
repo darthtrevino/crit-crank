@@ -4,6 +4,7 @@ import "CoreLibs/graphics"
 import "CoreLibs/timer"
 
 import "dice"
+import "dice3d"
 import "characters"
 import "sheet"
 import "ui"
@@ -29,6 +30,7 @@ local state = {
 	mode = "normal", -- d20 mode: normal | adv | dis
 	critPending = false,
 	roll = nil,
+	preview = nil,  -- resting 3D dice for the selected row
 }
 
 local crank = { windup = 0, tick = 0, idle = 0 }
@@ -113,8 +115,12 @@ local function loadCharacter(i)
 	state.mode = "normal"
 end
 
+local function diceMoving()
+	return state.roll ~= nil and state.roll.phase ~= "done"
+end
+
 local function moveSel(dir)
-	if state.roll and state.roll.phase == "tumble" then return end
+	if diceMoving() then return end
 	local rows = currentPage().rows
 	local i = state.sel[state.page]
 	repeat
@@ -128,7 +134,7 @@ local function moveSel(dir)
 end
 
 local function changePage(dir)
-	if state.roll and state.roll.phase == "tumble" then return end
+	if diceMoving() then return end
 	state.page = ((state.page - 1 + dir) % #state.pages) + 1
 	state.roll = nil
 	ensureVisible()
@@ -158,14 +164,43 @@ local function previewDice(spec)
 	return dice
 end
 
+local function previewFor(row)
+	local spec = effectiveSpec(row)
+	local key = tostring(row) .. Dice.format(spec)
+	if state.preview and state.preview.key == key then return state.preview end
+	local dice, bodies = previewDice(spec), {}
+	for i, d in ipairs(dice) do
+		bodies[i] = Dice3D.newBody(d.sides, d.sides)
+	end
+	state.preview = { key = key, dice = dice, bodies = bodies }
+	return state.preview
+end
+
+local function spinAll(amount)
+	for _, b in ipairs(state.roll.bodies) do
+		Dice3D.spin(b, amount * (0.8 + math.random() * 0.4))
+	end
+end
+
 local function startRoll(auto)
 	local row = selectedRow()
 	if not row then return end
 	local spec, crit = effectiveSpec(row)
+	local faces = Dice.faces(spec)
+	local bodies = {}
+	local preview = previewFor(row)
+	for i, d in ipairs(faces) do
+		-- pick the dice up from where they were resting
+		bodies[i] = Dice3D.newBody(d.sides)
+		local last = state.roll and state.roll.row == row and state.roll.bodies[i]
+		local from = last or preview.bodies[i]
+		if from and from.sides == d.sides then bodies[i].q = from.q end
+	end
 	state.roll = {
 		phase = "tumble", row = row, spec = spec, crit = crit, mode = state.mode,
-		faces = Dice.faces(spec), auto = auto and AUTO_FRAMES or nil,
+		faces = faces, bodies = bodies, auto = auto and AUTO_FRAMES or nil,
 	}
+	spinAll(0.35)
 	crank.tick, crank.idle = 0, 0
 	playTick()
 end
@@ -174,6 +209,14 @@ local function settle()
 	local roll = state.roll
 	local c = Characters[state.charIndex]
 	roll.result = Dice.roll(roll.spec, { lucky = c.lucky })
+	roll.phase = "landing"
+	for i, d in ipairs(roll.result.dice) do
+		Dice3D.land(roll.bodies[i], d.value)
+	end
+end
+
+local function finishLanding()
+	local roll = state.roll
 	roll.phase = "done"
 
 	if roll.spec.check then
@@ -190,10 +233,24 @@ local function updateRoll()
 	local amount = math.abs(change)
 	local roll = state.roll
 
+	if roll and roll.phase ~= "done" then
+		for _, b in ipairs(roll.bodies) do Dice3D.update(b) end
+	end
+
+	if roll and roll.phase == "landing" then
+		local settled = true
+		for _, b in ipairs(roll.bodies) do
+			if not Dice3D.isSettled(b) then settled = false end
+		end
+		if settled then finishLanding() end
+		return
+	end
+
 	if roll and roll.phase == "tumble" then
 		if roll.auto then
 			roll.auto -= 1
-			if roll.auto % 2 == 0 then
+			spinAll(0.12)
+			if roll.auto % 3 == 0 then
 				roll.faces = Dice.faces(roll.spec)
 				playTick()
 			end
@@ -202,6 +259,7 @@ local function updateRoll()
 		end
 		if amount > 0.5 then
 			crank.idle = 0
+			spinAll(amount * 0.004)
 			crank.tick += amount
 			if crank.tick >= CRANK_TICK then
 				crank.tick %= CRANK_TICK
@@ -252,12 +310,12 @@ function pd.leftButtonDown() changePage(-1) end
 function pd.rightButtonDown() changePage(1) end
 
 function pd.AButtonDown()
-	if state.roll and state.roll.phase == "tumble" then return end
+	if diceMoving() then return end
 	startRoll(true)
 end
 
 function pd.BButtonDown()
-	if state.roll and state.roll.phase == "tumble" then return end
+	if diceMoving() then return end
 	local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
 	state.mode = nextMode[state.mode]
 	if state.roll then state.roll = nil end
@@ -308,7 +366,7 @@ function pd.update()
 	local tray = { row = row, mode = state.mode, critPending = state.critPending, roll = state.roll }
 	if row then
 		tray.spec = effectiveSpec(row)
-		tray.preview = previewDice(tray.spec)
+		tray.preview = previewFor(row)
 	end
 	UI.drawTray(tray)
 	UI.drawFooter(state.mode)

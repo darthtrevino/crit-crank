@@ -1,7 +1,6 @@
 -- Drawing routines for the character sheet.
 
 local gfx <const> = playdate.graphics
-local geo <const> = playdate.geometry
 
 UI = {}
 
@@ -168,71 +167,6 @@ function UI.drawList(page, sel, scroll, critPending)
 	end
 end
 
----------------------------------------------------------------- dice
-
-local function regular(cx, cy, r, n, rot)
-	local pts = {}
-	for i = 0, n - 1 do
-		local a = rot + i * 2 * math.pi / n
-		pts[#pts + 1] = cx + r * math.cos(a)
-		pts[#pts + 1] = cy + r * math.sin(a)
-	end
-	return pts
-end
-
-local function dieShape(sides, cx, cy, r)
-	if sides == 4 then
-		return regular(cx, cy + r * 0.2, r * 1.1, 3, -math.pi / 2), r * 0.15
-	elseif sides == 6 then
-		return { cx - r * 0.8, cy - r * 0.8, cx + r * 0.8, cy - r * 0.8, cx + r * 0.8, cy + r * 0.8, cx - r * 0.8, cy + r * 0.8 }, 0
-	elseif sides == 8 then
-		return regular(cx, cy, r, 4, -math.pi / 2), 0
-	elseif sides == 10 or sides == 100 then
-		return { cx, cy - r, cx + r, cy - r * 0.1, cx + r * 0.6, cy + r * 0.7, cx, cy + r,
-			cx - r * 0.6, cy + r * 0.7, cx - r, cy - r * 0.1 }, 0
-	elseif sides == 12 then
-		return regular(cx, cy, r, 5, -math.pi / 2), r * 0.05
-	else
-		return regular(cx, cy, r, 6, -math.pi / 2), 0
-	end
-end
-
--- style: "normal" | "dropped" | "hot" (inverted, for crits)
-function UI.drawDie(sides, value, cx, cy, r, style)
-	local pts, textOffset = dieShape(sides, cx, cy, r)
-	local poly = geo.polygon.new(table.unpack(pts))
-	poly:close()
-
-	if style == "hot" then
-		gfx.setColor(gfx.kColorBlack)
-		gfx.fillPolygon(poly)
-	else
-		gfx.setColor(gfx.kColorWhite)
-		gfx.fillPolygon(poly)
-	end
-	gfx.setColor(gfx.kColorBlack)
-	if style == "dropped" then
-		-- faded outline for dice that don't count
-		gfx.setDitherPattern(0.5, gfx.image.kDitherTypeBayer2x2)
-		gfx.setLineWidth(1)
-	else
-		gfx.setLineWidth(2)
-	end
-	gfx.drawPolygon(poly)
-	gfx.setColor(gfx.kColorBlack)
-	gfx.setLineWidth(1)
-
-	if style == "hot" then gfx.setImageDrawMode(gfx.kDrawModeFillWhite) end
-	local s = tostring(value)
-	local f = fonts.small
-	drawText(f, s, cx, math.floor(cy + textOffset - f:getHeight() / 2), "center")
-	gfx.setImageDrawMode(gfx.kDrawModeCopy)
-
-	if style == "dropped" then
-		gfx.drawLine(cx - r * 0.6, cy + r * 0.6, cx + r * 0.6, cy - r * 0.6)
-	end
-end
-
 ---------------------------------------------------------------- dice tray
 
 local TRAY_CX = UI.TRAY_X + math.floor((UI.W - UI.TRAY_X) / 2)
@@ -247,20 +181,23 @@ local function drawPill(text, cx, y)
 	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
-local function drawDiceGrid(dice, top, bottom, jitter, result)
+-- dice: list of { sides, value, kept }; bodies: matching Dice3D bodies.
+local function drawDiceGrid(dice, bodies, top, bottom, result)
 	local n = #dice
 	if n == 0 then return end
-	local r, gap, cols
-	if n <= 2 then
-		r, cols = 22, n
+	local r, cols
+	if n == 1 then
+		r, cols = 30, 1
+	elseif n == 2 then
+		r, cols = 24, 2
 	elseif n <= 6 then
-		r, cols = 15, 3
+		r, cols = 17, 3
 	elseif n <= 12 then
-		r, cols = 13, 4
+		r, cols = 14, 4
 	else
-		r, cols = 10, 5
+		r, cols = 11, 5
 	end
-	gap = r * 2 + 6
+	local gap = math.min(r * 2 + 4, math.floor((UI.W - UI.TRAY_X - 4) / cols))
 	local rowsN = math.ceil(n / cols)
 	local gridH = rowsN * gap
 	local startY = top + math.floor((bottom - top - gridH) / 2) + gap / 2
@@ -270,21 +207,18 @@ local function drawDiceGrid(dice, top, bottom, jitter, result)
 		local col = (i - 1) % cols
 		local cx = TRAY_CX - (inRow - 1) * gap / 2 + col * gap
 		local cy = startY + row * gap
-		if jitter then
-			cx += math.random(-2, 2)
-			cy += math.random(-2, 2)
-		end
 		local style = "normal"
 		if not d.kept then
 			style = "dropped"
 		elseif result and d.sides == 20 and result.natural == d.value and (result.crit or result.fumble) then
 			style = "hot"
 		end
-		UI.drawDie(d.sides, d.value, cx, cy, r, style)
+		Dice3D.draw(bodies[i], cx, cy, r, d.value, style, fonts.small)
 	end
 end
 
--- tray = { row, spec, mode, critPending, roll = {phase, faces, result, spec, crit, lucky} }
+-- tray = { row, spec, mode, critPending, preview = {dice, bodies},
+--          roll = {phase, faces, bodies, result, spec, crit, mode} }
 function UI.drawTray(t)
 	gfx.setColor(gfx.kColorBlack)
 	gfx.drawLine(UI.TRAY_X - 2, UI.BODY_Y, UI.TRAY_X - 2, UI.FOOTER_Y - 1)
@@ -318,7 +252,7 @@ function UI.drawTray(t)
 
 	local diceTop, diceBottom = y + 32, y + 120
 	if not roll then
-		drawDiceGrid(t.preview, diceTop, diceBottom, false)
+		drawDiceGrid(t.preview.dice, t.preview.bodies, diceTop, diceBottom)
 		if row.detail then
 			drawText(fonts.small, fit(fonts.small, row.detail, TRAY_W), TRAY_CX, y + 128, "center")
 		end
@@ -328,13 +262,17 @@ function UI.drawTray(t)
 	end
 
 	if roll.phase == "tumble" then
-		drawDiceGrid(roll.faces, diceTop, diceBottom, true)
+		drawDiceGrid(roll.faces, roll.bodies, diceTop, diceBottom)
 		drawText(fonts.small, "rolling...", TRAY_CX, y + 150, "center")
 		return
 	end
 
 	local res = roll.result
-	drawDiceGrid(res.dice, diceTop, diceBottom, false, res)
+	if roll.phase == "landing" then
+		drawDiceGrid(res.dice, roll.bodies, diceTop, diceBottom)
+		return
+	end
+	drawDiceGrid(res.dice, roll.bodies, diceTop, diceBottom, res)
 	drawText(fonts.big, tostring(res.total), TRAY_CX, y + 122, "center")
 
 	local note
