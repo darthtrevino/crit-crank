@@ -22,6 +22,9 @@ const REST_STEP = 90;
 const REST_DECAY = 30;
 const REST_RELOCK = 15;
 const RULES_SLIDE_FRAMES = 9;
+// With reduced motion, rolls land at once and the Rules panel doesn't slide.
+const REDUCED = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
+const calm = () => !!REDUCED?.matches;
 const RULES_LINE = 22;
 const RULES_CRANK = 0.8;
 const RULES_EASE = 0.3;
@@ -398,6 +401,7 @@ export class Game {
 	}
 
 	spinAll(amount) {
+		if (calm()) return;
 		for (const b of this.state.roll.bodies) Dice3D.spin(b, amount * (0.8 + Math.random() * 0.4));
 	}
 
@@ -439,7 +443,7 @@ export class Game {
 			if (from && from.sides === d.sides) b.q = from.q;
 			return b;
 		});
-		s.roll = { phase: "tumble", row, spec, crit, mode: s.mode, faces, bodies, auto: auto ? AUTO_FRAMES : null };
+		s.roll = { phase: "tumble", row, spec, crit, mode: s.mode, faces, bodies, auto: auto ? (calm() ? 1 : AUTO_FRAMES) : null };
 		this.spinAll(0.35);
 		this.crank.tick = 0;
 		this.crank.idle = 0;
@@ -451,6 +455,7 @@ export class Game {
 		roll.result = Dice.roll(roll.spec, { lucky: this.character.lucky });
 		roll.phase = "landing";
 		roll.result.dice.forEach((d, i) => Dice3D.land(roll.bodies[i], d.value));
+		if (calm()) for (const b of roll.bodies) Object.assign(b, { q: b.landTo, landing: false });
 	}
 
 	finishLanding() {
@@ -569,7 +574,7 @@ export class Game {
 		const d = Rules.describe(this.character, this.selectedRow(), this.currentPage());
 		const { text, height } = UI.measureRuleBody(this.g, d.body || "");
 		this.releaseAll();
-		this.state.rules = { title: d.title || "", sub: d.sub || "", text, height, scroll: 0, target: 0, t: 0, bob: 0 };
+		this.state.rules = { title: d.title || "", sub: d.sub || "", text, height, scroll: 0, target: 0, t: calm() ? RULES_SLIDE_FRAMES : 0, bob: 0 };
 	}
 
 	closeRules() {
@@ -580,14 +585,15 @@ export class Game {
 	updateRules() {
 		const s = this.state;
 		const v = s.rules;
-		v.t = Math.max(0, Math.min(RULES_SLIDE_FRAMES, v.t + (v.closing ? -1 : 1)));
+		if (calm()) v.t = v.closing ? 0 : RULES_SLIDE_FRAMES;
+		else v.t = Math.max(0, Math.min(RULES_SLIDE_FRAMES, v.t + (v.closing ? -1 : 1)));
 		if (v.closing && v.t === 0) {
 			s.rules = null;
 			return null;
 		}
 		const d = v.target - v.scroll;
-		v.scroll = Math.abs(d) < 0.5 ? v.target : v.scroll + d * RULES_EASE;
-		v.bob += 0.2;
+		v.scroll = Math.abs(d) < 0.5 || calm() ? v.target : v.scroll + d * RULES_EASE;
+		if (!calm()) v.bob += 0.2;
 		const p = 1 - v.t / RULES_SLIDE_FRAMES;
 		return H * p * p * p;
 	}
@@ -784,6 +790,30 @@ export class Game {
 		UI.drawFooter(g, footerMode, s.toast);
 		if (s.rules && this.rulesY != null) UI.drawRuleViewer(g, s.rules, this.rulesY);
 		g.present();
+	}
+
+	// Plain-text summary of what's on screen, for the page's live region.
+	statusText() {
+		const s = this.state;
+		if (s.menu) return s.menu.sel === 0 ? `Pause menu. Hero: ${this.names[s.menu.hero]}` : "Pause menu. Rules";
+		if (s.rules) return `Rules: ${s.rules.title}. ${s.rules.sub} ${s.rules.text}`;
+		const page = this.currentPage();
+		const row = this.selectedRow();
+		const parts = [`${page.title} page`];
+		if (row) {
+			let value = row.value || "";
+			if (row.kind === "resource") value = this.getResource(row.key).join(" of ");
+			else if (row.kind === "counter") value = String(this.getCounter(row.key));
+			parts.push(`${row.label}${value ? " " + value : ""}`);
+		}
+		if (s.mode !== "normal") parts.push(s.mode === "adv" ? "Advantage" : "Disadvantage");
+		const roll = s.roll;
+		if (roll && roll.phase === "done") {
+			const r = roll.result;
+			parts.push(`Rolled ${r.total}${r.crit ? ", natural 20" : r.fumble ? ", natural 1" : ""}`);
+		}
+		if (s.toast) parts.push(s.toast);
+		return parts.join(". ");
 	}
 
 	// Jump straight to a page/row for the docs ("STATUS", "Long Rest").

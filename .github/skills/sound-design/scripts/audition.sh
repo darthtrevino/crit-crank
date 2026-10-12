@@ -18,7 +18,9 @@ sim="$sdk/bin/Playdate Simulator.app/Contents/MacOS/Playdate Simulator"
 data="$sdk/Disk/Data/com.christrevino.charsheet"
 lock="$root/.github/skills/playdate-simulator/scripts/simlock.sh"
 
-"$lock" acquire | grep -q 'acquired\|already held' || { "$lock" status; exit 1; }
+# Only proceed on a fresh acquire: if the lock is already held (even by this
+# checkout), another run may own the Simulator.
+"$lock" acquire | grep -q '^acquired' || { "$lock" status; echo "Simulator lock is busy; release it first." >&2; exit 1; }
 if pgrep -f "Playdate Simulator" >/dev/null; then
 	echo "A Simulator is already running; quit it first." >&2
 	"$lock" release; exit 1

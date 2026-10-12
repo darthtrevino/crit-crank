@@ -29,7 +29,7 @@
 	<main id="main">
 		<section class="demo" aria-labelledby="demo-title">
 			<h2 id="demo-title">Try it</h2>
-			<p class="hint">This is the real game, ported to your browser. Drag the crank in a circle (or scroll over the screen) to roll. Click the buttons or use the keys: <kbd>↑</kbd><kbd>↓</kbd> pick a row, <kbd>←</kbd><kbd>→</kbd> switch pages, <kbd>X</kbd> is Ⓐ (quick-roll), <kbd>Z</kbd> is Ⓑ (advantage), <kbd>[</kbd><kbd>]</kbd> turn the crank and <kbd>Esc</kbd> is Menu.</p>
+			<p class="hint">This is the real game, ported to your browser. Drag the crank in a circle (or scroll over the screen) to roll. Click the buttons or use the keys: <kbd>↑</kbd><kbd>↓</kbd> pick a row, <kbd>←</kbd><kbd>→</kbd> switch pages, <kbd>X</kbd> is Ⓐ (quick-roll), <kbd>Z</kbd> is Ⓑ (advantage), <kbd>[</kbd><kbd>]</kbd> (or arrows on the focused crank) turn the crank and <kbd>Esc</kbd> is Menu.</p>
 			<div class="pd" data-sim>
 				<div class="pd-body">
 					<span class="pd-lock" aria-hidden="true"></span>
@@ -49,15 +49,16 @@
 					<button class="pd-ab pd-a" data-btn="a" aria-label="A button">A</button>
 					<span class="pd-speaker" aria-hidden="true"></span>
 				</div>
-				<div class="pd-crank" role="slider" tabindex="0" aria-label="Crank: drag in a circle, scroll, or press [ and ] to turn" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0">
+				<div class="pd-crank" role="slider" tabindex="0" aria-label="Crank: drag in a circle, scroll, or use the arrow keys to turn" aria-valuemin="0" aria-valuemax="359" aria-valuenow="90">
 					<span class="pd-crank-hub" aria-hidden="true"></span>
 					<span class="pd-crank-arm" aria-hidden="true"></span>
 					<span class="pd-crank-knob" aria-hidden="true"></span>
 				</div>
+				<p class="sr-only" data-sim-status role="status" aria-live="polite"></p>
 			</div>
 			<div class="sim-tools">
 				<button class="chip" type="button" data-sim-focus="STATUS|Short Rest">Try crank-to-rest</button>
-				<button class="chip" type="button" data-sim-focus="DICE">Build a dice pool</button>
+				<button class="chip" type="button" data-sim-focus="DICE|Roll pool">Build a dice pool</button>
 				<button class="chip" type="button" data-mute aria-pressed="false">Sound on</button>
 				<button class="chip" type="button" data-reset>Reset demo</button>
 			</div>

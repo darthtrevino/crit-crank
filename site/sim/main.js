@@ -20,6 +20,9 @@ function start(root) {
 	const game = new Game(g);
 	new ResizeObserver(() => { fitCanvas(); game.draw(); }).observe(canvas);
 	window.critCrank = game;
+	// The loop saves a moment after changes; flush them when the page goes away.
+	window.addEventListener("pagehide", () => game.save());
+	document.addEventListener("visibilitychange", () => { if (document.hidden) game.save(); });
 
 	// ---------------------------------------------------------------- buttons
 	const buttons = root.querySelectorAll("[data-btn]");
@@ -54,15 +57,43 @@ function start(root) {
 	const CRANK_KEYS = { "]": 15, ".": 15, "[": -15, ",": -15 };
 	const held = new Set();
 	const crankHeld = new Map();
+	const focusedBtn = new Map();
 	let active = false;
 
 	root.addEventListener("pointerdown", () => { active = true; });
 	document.addEventListener("pointerdown", (e) => { if (!root.contains(e.target)) active = false; });
 	root.addEventListener("focusin", () => { active = true; });
 
+	// Keys on a focused control act on that control: Enter/Space press a
+	// focused button, and the crank (a slider) turns with arrows, Page Up/Down,
+	// Home and End.
+	const SLIDER_STEP = { ArrowUp: 15, ArrowRight: 15, ArrowDown: -15, ArrowLeft: -15, PageUp: 90, PageDown: -90 };
 	document.addEventListener("keydown", (e) => {
 		if (!active || e.metaKey || e.ctrlKey || e.altKey) return;
 		const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+		if (e.target === crank) {
+			if (key in SLIDER_STEP) {
+				e.preventDefault();
+				crankHeld.set(key, SLIDER_STEP[key]);
+				return;
+			}
+			if (key === "Home" || key === "End") {
+				e.preventDefault();
+				const at = ((crankAngle % 360) + 360) % 360;
+				turn(key === "Home" ? -at : 359 - at);
+				return;
+			}
+		}
+		const focused = e.target.closest?.("[data-btn]");
+		if (focused && root.contains(focused) && (key === "Enter" || key === " ")) {
+			e.preventDefault();
+			if (held.has(key)) return;
+			held.add(key);
+			focusedBtn.set(key, focused.dataset.btn);
+			focused.classList.add("is-down");
+			game.press(focused.dataset.btn);
+			return;
+		}
 		if (key in CRANK_KEYS) {
 			e.preventDefault();
 			crankHeld.set(key, CRANK_KEYS[key]);
@@ -80,13 +111,15 @@ function start(root) {
 		const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
 		crankHeld.delete(key);
 		if (!held.delete(key)) return;
-		const btn = KEYS[key];
+		const btn = focusedBtn.get(key) || KEYS[key];
+		focusedBtn.delete(key);
 		btnEl(btn)?.classList.remove("is-down");
 		game.unpress(btn);
 	});
 	window.addEventListener("blur", () => {
 		held.clear();
 		crankHeld.clear();
+		focusedBtn.clear();
 		game.releaseAll();
 		for (const el of buttons) el.classList.remove("is-down");
 	});
@@ -95,6 +128,7 @@ function start(root) {
 	const crank = root.querySelector(".pd-crank");
 	const hub = root.querySelector(".pd-crank-hub");
 	let crankAngle = 90;
+	crank.setAttribute("aria-valuenow", String(crankAngle));
 	const turn = (deg) => {
 		crankAngle = (crankAngle + deg) % 360;
 		const rad = crankAngle * Math.PI / 180;
@@ -186,7 +220,17 @@ function start(root) {
 			acc -= FRAME;
 		}
 		game.draw();
+		announce();
 	}
+	// Screen readers get the canvas state as text, updated when it changes.
+	const live = root.querySelector("[data-sim-status]");
+	let said = "";
+	const announce = () => {
+		if (!live) return;
+		const text = game.statusText();
+		if (text !== said) live.textContent = said = text;
+	};
 	game.draw();
+	announce();
 	requestAnimationFrame(frame);
 }

@@ -335,6 +335,7 @@ export class Gfx {
 			return;
 		}
 		const save = this.fill;
+		const top = base - 11;
 		this.fill = color;
 		if (ch === "◉") { this.fillCircle(x + 4, top + 5, 2); this.drawCircle(x + 4, top + 5, 4); }
 		else this.fillCircle(x + 4, top + 5, 3);
