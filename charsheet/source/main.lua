@@ -78,32 +78,46 @@ local function playLand(result)
 	end
 end
 
--- Celebratory horn for natural 20s: BWA-BWA-BWAAAAA, a brassy Bb major
--- chord on a stack of detuned saws.
-local HORN_FREQS = { 233.1, 234.4, 293.7, 295.2, 349.2, 466.2 }
-local hornVoices = {}
-for i, _ in ipairs(HORN_FREQS) do
-	local v = pd.sound.synth.new(pd.sound.kWaveSawtooth)
-	v:setADSR(0.015, 0.05, 0.85, 0.12)
-	hornVoices[i] = v
-end
-local hornFilter = pd.sound.twopolefilter.new(pd.sound.kFilterLowPass)
-hornFilter:setFrequency(2600)
-hornFilter:setResonance(0.3)
+-- DJ air horn for natural 20s: BRAP-BRAP-BRAP-BRAAAAP on F#5, matching the
+-- web demo. Each blast is a plain square + saw + octave saw that fades out
+-- exponentially; the long blast sags a semitone as it dies away.
+local HORN_VOICES = {
+	{ 740.0, pd.sound.kWaveSquare },
+	{ 745.0, pd.sound.kWaveSawtooth },
+	{ 1480.0, pd.sound.kWaveSawtooth },
+}
+local HORN_SAG = -1.07 -- half-steps; 0.94x the pitch
+local hornSag = pd.sound.lfo.new(pd.sound.kLFOSine)
+hornSag:setDepth(0)
 local hornChannel = pd.sound.channel.new()
-hornChannel:addEffect(hornFilter)
-for _, v in ipairs(hornVoices) do hornChannel:addSource(v) end
-
-local function hornBlast(len)
-	for i, v in ipairs(hornVoices) do
-		v:playNote(HORN_FREQS[i], 0.13, len)
+local function hornSet(len)
+	local set = {}
+	for i, def in ipairs(HORN_VOICES) do
+		local v = pd.sound.synth.new(def[2])
+		v:setADSR(0.02, len - 0.02, 0, 0.03)
+		v:setEnvelopeCurvature(1)
+		hornChannel:addSource(v)
+		set[i] = v
 	end
+	return set
+end
+local hornShort, hornLong = hornSet(0.11), hornSet(0.9)
+for _, v in ipairs(hornLong) do v:setFrequencyMod(hornSag) end
+
+local function hornBlast(set, len)
+	for i, v in ipairs(set) do v:playNote(HORN_VOICES[i][1], 0.15, len) end
 end
 
 local function playHorn()
-	hornBlast(0.13)
-	pd.timer.performAfterDelay(190, function() hornBlast(0.13) end)
-	pd.timer.performAfterDelay(380, function() hornBlast(0.9) end)
+	for i = 0, 2 do
+		pd.timer.performAfterDelay(i * 150, function() hornBlast(hornShort, 0.11) end)
+	end
+	pd.timer.performAfterDelay(480, function()
+		hornSag:setCenter(0)
+		hornBlast(hornLong, 0.9)
+		local t = pd.timer.new(900, 0, HORN_SAG)
+		t.updateCallback = function(timer) hornSag:setCenter(timer.value) end
+	end)
 end
 
 -- Sad trombone for natural 1s: wah wah wah waaaaah, muted brass with a wobble.

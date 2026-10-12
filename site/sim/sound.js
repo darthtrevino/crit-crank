@@ -77,25 +77,28 @@ export function landFor(result) {
 	else land(523, 0.35, 0.1);
 }
 
-// Celebratory horn for natural 20s: BWA-BWA-BWAAAAA, a brassy Bb major
-// chord on a stack of detuned saws.
-const HORN_FREQS = [233.1, 234.4, 293.7, 295.2, 349.2, 466.2];
+// DJ air horn for natural 20s: BRAP-BRAP-BRAP-BRAAAAP on F#5. Each blast fades
+// out exponentially; the long one sags to 0.94x pitch.
 export function horn() {
 	const ctx = audio();
 	if (!ctx) return;
-	const lp = ctx.createBiquadFilter();
-	lp.type = "lowpass";
-	lp.frequency.value = 2600;
-	lp.Q.value = 1;
-	lp.connect(master);
-	const blast = (at, len) => {
-		for (const freq of HORN_FREQS) {
-			note({ wave: "sawtooth", freq, vol: 0.13, len, a: 0.015, d: 0.05, s: 0.85, r: 0.12, at, dest: lp });
+	const t0 = ctx.currentTime;
+	for (const [at, len] of [[0, 0.11], [0.15, 0.11], [0.3, 0.11], [0.48, 0.9]]) {
+		for (const [f, type] of [[740, "square"], [745, "sawtooth"], [1480, "sawtooth"]]) {
+			const t = t0 + at;
+			const osc = ctx.createOscillator();
+			const g = ctx.createGain();
+			osc.type = type;
+			osc.frequency.setValueAtTime(f, t);
+			if (len > 0.5) osc.frequency.exponentialRampToValueAtTime(f * 0.94, t + len);
+			g.gain.setValueAtTime(0.0001, t);
+			g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+			g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+			osc.connect(g).connect(master);
+			osc.start(t);
+			osc.stop(t + len + 0.05);
 		}
-	};
-	blast(0, 0.13);
-	blast(0.19, 0.13);
-	blast(0.38, 0.9);
+	}
 }
 
 // Sad trombone for natural 1s: wah wah wah waaaaah.
