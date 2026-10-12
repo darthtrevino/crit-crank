@@ -45,7 +45,7 @@ CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on
 
 ## Working with the user's hardware
 
-See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`.
+See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`, `sound-design` (Simulator auditions and a slider tuner for sounds).
 
 - **One session at a time on the Simulator.** Take the lock with `.github/skills/playdate-simulator/scripts/simlock.sh acquire` before `make run`, and release it when done. If it's busy, don't launch or kill the Simulator.
 

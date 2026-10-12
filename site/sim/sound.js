@@ -77,28 +77,31 @@ export function landFor(result) {
 	else land(523, 0.35, 0.1);
 }
 
-// DJ air horn for natural 20s: BRAP-BRAP-BRAP-BRAAAAP on F#5. Each blast fades
-// out exponentially; the long one sags to 0.94x pitch.
-export function horn() {
+// DJ air horn for natural 20s, as in main.lua. HORN must match main.lua's;
+// the sound-design skill's tuner passes its own settings to horn().
+export const HORN = Object.freeze({ hitHz: 587.3, hitMs: 155, hz: 740, sagAt: 150, sag: -4.05, sagMs: 90, holdMs: 310 });
+const HORN_VOICES = [[0.5, "sawtooth", 0.2], [737 / 740, "sawtooth", 0.15], [743.5 / 740, "sawtooth", 0.15], [1, "square", 0.12], [2, "sawtooth", 0.06]];
+export function horn(h = HORN) {
 	const ctx = audio();
 	if (!ctx) return;
-	const t0 = ctx.currentTime;
-	for (const [at, len] of [[0, 0.11], [0.15, 0.11], [0.3, 0.11], [0.48, 0.9]]) {
-		for (const [f, type] of [[740, "square"], [745, "sawtooth"], [1480, "sawtooth"]]) {
-			const t = t0 + at;
-			const osc = ctx.createOscillator();
-			const g = ctx.createGain();
-			osc.type = type;
-			osc.frequency.setValueAtTime(f, t);
-			if (len > 0.5) osc.frequency.exponentialRampToValueAtTime(f * 0.94, t + len);
-			g.gain.setValueAtTime(0.0001, t);
-			g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
-			g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-			osc.connect(g).connect(master);
-			osc.start(t);
-			osc.stop(t + len + 0.05);
+	const lp = ctx.createBiquadFilter();
+	lp.type = "lowpass";
+	lp.frequency.value = 4200;
+	lp.connect(master);
+	// pd.easingFunctions.outQuad, sampled for the drop
+	const curve = Float32Array.from({ length: 32 }, (_, i) => { const x = i / 31; return h.sag * 100 * x * (2 - x); });
+	const blast = (at, hz, len, env, sag) => {
+		for (const [ratio, wave, vol] of HORN_VOICES) {
+			const osc = note({ wave, freq: hz * ratio, vol, len, ...env, at, dest: lp });
+			if (osc && sag && h.sag && h.sagMs > 0) {
+				osc.detune.setValueCurveAtTime(curve, ctx.currentTime + at + h.sagAt / 1000, h.sagMs / 1000);
+			}
 		}
-	}
+	};
+	const shortEnv = { a: 0.008, d: 0.04, s: 0.85, r: 0.05 };
+	for (let i = 0; i < 3; i++) blast(i * h.hitMs / 1000, h.hitHz, 0.1, shortEnv);
+	const len = (h.sagAt + h.sagMs + h.holdMs) / 1000;
+	blast((3 * h.hitMs + 30) / 1000, h.hz, len, { a: 0.012, d: 0.08, s: 0.9, r: 0.3 }, true);
 }
 
 // Sad trombone for natural 1s: wah wah wah waaaaah.

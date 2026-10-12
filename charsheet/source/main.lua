@@ -78,45 +78,66 @@ local function playLand(result)
 	end
 end
 
--- DJ air horn for natural 20s: BRAP-BRAP-BRAP-BRAAAAP on F#5, matching the
--- web demo. Each blast is a plain square + saw + octave saw that fades out
--- exponentially; the long blast sags a semitone as it dies away.
-local HORN_VOICES = {
-	{ 740.0, pd.sound.kWaveSquare },
-	{ 745.0, pd.sound.kWaveSawtooth },
-	{ 1480.0, pd.sound.kWaveSawtooth },
+-- DJ air horn for natural 20s: BRAP-BRAP-BRAP-BRAAAAP. Each blast is an
+-- octave-down saw for body, a detuned saw pair and a square for bite, and a
+-- quiet octave-up saw, through a gentle low-pass. The long blast holds, slides
+-- down a little and holds there as it fades. Tune it with the sound-design
+-- skill's tuner; keep HORN in step with site/sim/sound.js.
+local HORN = {
+	hitHz = 587.3, -- pitch of the short hits
+	hitMs = 155,   -- time between hits
+	hz = 740,      -- pitch of the long blast
+	sagAt = 150,   -- ms the long blast holds before dropping
+	sag = -4.05,   -- half-steps it drops
+	sagMs = 90,    -- ms the drop takes
+	holdMs = 310,  -- ms it holds the low note before fading
 }
-local HORN_SAG = -1.07 -- half-steps; 0.94x the pitch
+local HORN_VOICES = { -- pitch ratio, wave, volume
+	{ 0.5, pd.sound.kWaveSawtooth, 0.20 },
+	{ 737 / 740, pd.sound.kWaveSawtooth, 0.15 },
+	{ 743.5 / 740, pd.sound.kWaveSawtooth, 0.15 },
+	{ 1, pd.sound.kWaveSquare, 0.12 },
+	{ 2, pd.sound.kWaveSawtooth, 0.06 },
+}
 local hornSag = pd.sound.lfo.new(pd.sound.kLFOSine)
 hornSag:setDepth(0)
+local hornFilter = pd.sound.twopolefilter.new(pd.sound.kFilterLowPass)
+hornFilter:setFrequency(4200)
+hornFilter:setResonance(0.15)
 local hornChannel = pd.sound.channel.new()
-local function hornSet(len)
+hornChannel:addEffect(hornFilter)
+local function hornSet(a, d, s, r)
 	local set = {}
 	for i, def in ipairs(HORN_VOICES) do
 		local v = pd.sound.synth.new(def[2])
-		v:setADSR(0.02, len - 0.02, 0, 0.03)
+		v:setADSR(a, d, s, r)
 		v:setEnvelopeCurvature(1)
 		hornChannel:addSource(v)
 		set[i] = v
 	end
 	return set
 end
-local hornShort, hornLong = hornSet(0.11), hornSet(0.9)
+local hornShort = hornSet(0.008, 0.04, 0.85, 0.05)
+local hornLong = hornSet(0.012, 0.08, 0.9, 0.3)
 for _, v in ipairs(hornLong) do v:setFrequencyMod(hornSag) end
 
-local function hornBlast(set, len)
-	for i, v in ipairs(set) do v:playNote(HORN_VOICES[i][1], 0.15, len) end
+local function hornBlast(set, hz, len)
+	for i, v in ipairs(set) do v:playNote(hz * HORN_VOICES[i][1], HORN_VOICES[i][3], len) end
 end
 
 local function playHorn()
+	local h = HORN
 	for i = 0, 2 do
-		pd.timer.performAfterDelay(i * 150, function() hornBlast(hornShort, 0.11) end)
+		pd.timer.performAfterDelay(i * h.hitMs, function() hornBlast(hornShort, h.hitHz, 0.1) end)
 	end
-	pd.timer.performAfterDelay(480, function()
+	pd.timer.performAfterDelay(3 * h.hitMs + 30, function()
 		hornSag:setCenter(0)
-		hornBlast(hornLong, 0.9)
-		local t = pd.timer.new(900, 0, HORN_SAG)
-		t.updateCallback = function(timer) hornSag:setCenter(timer.value) end
+		hornBlast(hornLong, h.hz, (h.sagAt + h.sagMs + h.holdMs) / 1000)
+		pd.timer.performAfterDelay(h.sagAt, function()
+			local t = pd.timer.new(h.sagMs, 0, h.sag, pd.easingFunctions.outQuad)
+			t.updateCallback = function(timer) hornSag:setCenter(timer.value) end
+			t.timerEndedCallback = function() hornSag:setCenter(h.sag) end
+		end)
 	end)
 end
 

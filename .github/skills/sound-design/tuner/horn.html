@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Air horn tuner · Crit Crank</title>
+<style>
+	:root { --ink: #1a1a17; --paper: #f6f4ec; --yellow: #ffc500; }
+	* { box-sizing: border-box; }
+	body { margin: 0; font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+	main { max-width: 40rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+	h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+	p { margin: 0 0 1.25rem; }
+	.row { display: grid; grid-template-columns: 11rem 1fr 7.5rem; gap: .75rem; align-items: center; padding: .55rem 0; border-bottom: 1px solid rgb(0 0 0 / .1); }
+	label { font-weight: 600; }
+	output { font: 600 .95rem ui-monospace, Menlo, monospace; text-align: right; }
+	input[type=range] { width: 100%; accent-color: var(--ink); }
+	.bar { display: flex; gap: .6rem; flex-wrap: wrap; margin: 1.25rem 0; align-items: center; }
+	button { font: 700 1rem system-ui; padding: .6rem 1.2rem; border-radius: 999px; border: 2.5px solid var(--ink); background: #fff; box-shadow: 0 3px 0 var(--ink); cursor: pointer; }
+	button.primary { background: var(--ink); color: var(--yellow); }
+	button:active { translate: 0 2px; box-shadow: 0 1px 0 var(--ink); }
+	pre { background: var(--ink); color: var(--paper); padding: 1rem; border-radius: 12px; overflow-x: auto; font-size: .9rem; }
+	.small { font-size: .9rem; opacity: .75; }
+	@media (max-width: 560px) { .row { grid-template-columns: 1fr 6.5rem; } .row input { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+</head>
+<body>
+<main>
+	<h1>Air horn tuner</h1>
+	<p class="small">The natural-20 horn from <code>site/sim/sound.js</code>. Move a slider and it plays when you let go. Copy the settings into <code>HORN</code> in <code>main.lua</code> and <code>sound.js</code>, or tell the agent.</p>
+	<form id="params"></form>
+	<div class="bar">
+		<button class="primary" id="play" type="button">▶ Play</button>
+		<button id="reset" type="button">Reset</button>
+		<button id="copy" type="button">Copy settings</button>
+		<label class="small"><input type="checkbox" id="auto" checked> Play on change</label>
+	</div>
+	<pre id="out"></pre>
+	<p class="small">The browser uses Web Audio; the Playdate is close but not identical, and its speaker has much less bass. Check the result with <code>audition.sh</code>.</p>
+</main>
+<script type="module">
+import * as Sound from "/site/sim/sound.js";
+
+const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const noteName = (hz) => { const m = Math.round(69 + 12 * Math.log2(hz / 440)); return NOTES[m % 12] + (Math.floor(m / 12) - 1); };
+const semiToHz = (s) => +(740 * 2 ** (s / 12)).toFixed(1);
+const hzToSemi = (hz) => Math.round(12 * Math.log2(hz / 740));
+
+// key, label, min, max, step, to/from slider value, display
+const PARAMS = [
+	["hitMs", "Hit cadence", 100, 300, 5, null, (v) => `${v} ms`],
+	["hitHz", "Hit tone", -12, 12, 1, [semiToHz, hzToSemi], (v) => `${noteName(v)} · ${Math.round(v)} Hz`],
+	["sagAt", "Hold before drop", 0, 800, 10, null, (v) => `${v} ms`],
+	["sag", "Drop tone", -5, 0, 0.05, null, (v) => `${(+v).toFixed(2)} st`],
+	["sagMs", "Drop slide time", 0, 600, 10, null, (v) => `${v} ms`],
+	["holdMs", "Drop hold time", 0, 1500, 10, null, (v) => `${v} ms`],
+];
+
+const KEY = "critcrank-horn-tuner";
+let h = { ...Sound.HORN, ...JSON.parse(localStorage.getItem(KEY) || "{}") };
+const form = document.getElementById("params");
+const out = document.getElementById("out");
+const inputs = {};
+
+for (const [key, label, min, max, step, conv, show] of PARAMS) {
+	const row = document.createElement("div");
+	row.className = "row";
+	row.innerHTML = `<label for="p-${key}">${label}</label><input id="p-${key}" type="range" min="${min}" max="${max}" step="${step}"><output for="p-${key}"></output>`;
+	const input = row.querySelector("input");
+	const output = row.querySelector("output");
+	const read = () => (conv ? conv[0](+input.value) : +input.value);
+	const sync = () => { output.textContent = show(h[key]); };
+	input.addEventListener("input", () => { h[key] = read(); sync(); render(); });
+	input.addEventListener("change", () => { if (document.getElementById("auto").checked) play(); });
+	inputs[key] = { set: () => { input.value = conv ? conv[1](h[key]) : h[key]; sync(); } };
+	form.append(row);
+}
+
+function render() {
+	localStorage.setItem(KEY, JSON.stringify(h));
+	const w = Math.max(...Object.keys(Sound.HORN).map((k) => k.length));
+	out.textContent = "local HORN = {\n" + Object.keys(Sound.HORN)
+		.map((k) => `\t${(k + " =").padEnd(w + 2)} ${+(+h[k]).toFixed(2)},`).join("\n") + "\n}";
+}
+function load() { for (const k in inputs) inputs[k].set(); render(); }
+function play() { Sound.unlock(); Sound.setMuted(false); Sound.horn(h); }
+
+document.getElementById("play").addEventListener("click", play);
+document.getElementById("reset").addEventListener("click", () => { h = { ...Sound.HORN }; load(); });
+document.getElementById("copy").addEventListener("click", async (e) => {
+	await navigator.clipboard.writeText(out.textContent);
+	e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy settings"), 1200);
+});
+load();
+</script>
+</body>
+</html>
