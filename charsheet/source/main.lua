@@ -49,10 +49,12 @@ local state = {
 	toastFrames = 0,
 	dirty = false,
 	pool = {},      -- custom dice pool: d4..d20 counts and bonus
-	rest = nil,     -- crank progress on a rest row: { row, progress, idle, locked, done }
+	rest = nil,     -- crank progress on a rest row: { row, progress, idle, done }
 }
 
-local crank = { windup = 0, tick = 0, idle = 0, adjust = 0 }
+-- restLock: set after a rest; cleared once the crank is still for REST_RELOCK
+-- frames. Lives here, not on the rest row, so changing rows can't skip it.
+local crank = { windup = 0, tick = 0, idle = 0, adjust = 0, restLock = false, still = 0 }
 
 ---------------------------------------------------------------- sound
 
@@ -399,12 +401,11 @@ local function updateRest(row, amount)
 	end
 	if amount <= 0.5 then
 		r.idle += 1
-		if r.locked and r.idle >= REST_RELOCK then r.locked = false end
 		if r.idle > SETTLE_FRAMES then r.progress = math.max(0, r.progress - REST_DECAY) end
 		return
 	end
 	r.idle = 0
-	if r.locked then return end
+	if crank.restLock then return end
 	r.done = false
 	local before = r.progress
 	r.progress = math.min(REST_CRANK, r.progress + amount)
@@ -412,7 +413,8 @@ local function updateRest(row, amount)
 		tickSynth:playNote(400 + 600 * r.progress / REST_CRANK, 0.12, 0.03)
 	end
 	if r.progress >= REST_CRANK then
-		r.progress, r.locked, r.done = 0, true, true
+		r.progress, r.done = 0, true
+		crank.restLock, crank.still = true, 0
 		takeRest(row.key)
 		landSynth:playNote(784, 0.4, 0.3)
 	end
@@ -556,6 +558,11 @@ local function updateRoll()
 	local change = pd.getCrankChange()
 	local amount = math.abs(change)
 	local roll = state.roll
+
+	if crank.restLock then
+		crank.still = amount > 0.5 and 0 or crank.still + 1
+		if crank.still >= REST_RELOCK then crank.restLock = false end
+	end
 
 	if roll and roll.phase ~= "done" then
 		for _, b in ipairs(roll.bodies) do Dice3D.update(b) end
