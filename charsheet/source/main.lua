@@ -698,9 +698,71 @@ function pd.BButtonDown()
 	if state.roll then state.roll = nil end
 end
 
----------------------------------------------------------------- persistence / menu
-
 function pd.BButtonUp() release("b") end
+
+---------------------------------------------------------------- rules viewer
+
+local RULES_SLIDE_FRAMES = 9
+local RULES_LINE = 22      -- px per ⬆️⬇️ step
+local RULES_CRANK = 0.8    -- px per degree of crank
+local RULES_EASE = 0.3     -- fraction of the remaining scroll covered per frame
+
+local function rulesMaxScroll(v)
+	return math.max(v.height - UI.RULES_BODY_H, 0)
+end
+
+local function scrollRules(delta)
+	local v = state.rules
+	if not v or v.closing then return end
+	v.target = math.max(0, math.min(rulesMaxScroll(v), v.target + delta))
+end
+
+local function closeRules()
+	if state.rules then state.rules.closing = true end
+	for key in pairs(repeatTimers) do release(key) end
+end
+
+local rulesInput = {
+	upButtonDown = function() holdRepeat("up", function() scrollRules(-RULES_LINE) end) end,
+	upButtonUp = function() release("up") end,
+	downButtonDown = function() holdRepeat("down", function() scrollRules(RULES_LINE) end) end,
+	downButtonUp = function() release("down") end,
+	AButtonDown = function()
+		local v = state.rules
+		if v and v.target >= rulesMaxScroll(v) then closeRules() else scrollRules(UI.RULES_BODY_H - RULES_LINE) end
+	end,
+	BButtonDown = closeRules,
+	cranked = function(change) scrollRules(change * RULES_CRANK) end,
+}
+
+local function openRules()
+	local d = Rules.describe(character(), selectedRow(), currentPage())
+	local img, height = UI.renderRuleBody(Rules.plain(d.body or ""))
+	for key in pairs(repeatTimers) do release(key) end
+	if not state.rules then pd.inputHandlers.push(rulesInput, true) end
+	state.rules = {
+		title = Rules.plain(d.title or ""), sub = Rules.plain(d.sub or ""),
+		img = img, height = height, scroll = 0, target = 0, t = 0, bob = 0,
+	}
+end
+
+-- Advances the slide and scroll easing; returns the panel's y offset.
+local function updateRules()
+	local v = state.rules
+	v.t = math.max(0, math.min(RULES_SLIDE_FRAMES, v.t + (v.closing and -1 or 1)))
+	if v.closing and v.t == 0 then
+		state.rules = nil
+		pd.inputHandlers.pop()
+		return nil
+	end
+	local d = v.target - v.scroll
+	v.scroll = math.abs(d) < 0.5 and v.target or v.scroll + d * RULES_EASE
+	v.bob += 0.2
+	local p = 1 - v.t / RULES_SLIDE_FRAMES
+	return UI.H * p * p * p -- ease-out cubic
+end
+
+---------------------------------------------------------------- persistence / menu
 
 -- Prebuilt heroes keep their list position as their key (matches old saves);
 -- imported heroes use "ddb<id>".
@@ -773,6 +835,7 @@ local function buildMenu()
 			end
 		end
 	end)
+	menu:addMenuItem("Rules", openRules)
 end
 
 local function shortRest()
@@ -841,7 +904,13 @@ end
 
 function pd.update()
 	pd.timer.updateTimers()
-	updateRoll()
+	local rulesY
+	if state.rules then
+		pd.getCrankChange() -- the viewer owns the crank; don't let it wind up a roll
+		rulesY = updateRules()
+	else
+		updateRoll()
+	end
 	if state.toastFrames > 0 then
 		state.toastFrames -= 1
 		if state.toastFrames == 0 then state.toast = nil end
@@ -855,6 +924,10 @@ function pd.update()
 		end
 	end
 
+	if rulesY == 0 then
+		UI.drawRuleViewer(state.rules, 0)
+		return
+	end
 	gfx.clear(gfx.kColorWhite)
 	local c = Characters[state.charIndex]
 	local page = currentPage()
@@ -889,6 +962,5 @@ function pd.update()
 	elseif row and row.pool then
 		footerMode = "pool"
 	end
-	UI.drawFooter(footerMode, state.toast)
+	UI.drawFooter(footerMode, state.toast)	if rulesY then UI.drawRuleViewer(state.rules, rulesY) end
 end
-

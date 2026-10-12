@@ -9,7 +9,7 @@ Guidance for AI coding agents working on Crit Crank. Read this before you change
   - `ui.lua` draws them (fonts live in `UI.fonts`).
   - `dice.lua` / `dice3d.lua` handle rolls and the 3D renderer.
   - `resources.lua` covers HP, slots, rests and saved state.
-  - `rules.lua` holds the pause-screen rule text.
+  - `rules.lua` holds the rule text for the pause screen and the Rules viewer.
   - `characters.lua` has the prebuilt heroes; `importer.lua` takes in heroes from charsync.
   - `launcher/` holds the 1-bit card and icon art.
 - `charsync/`: Rust CLI. `ddb.rs` converts D&D Beyond JSON, `model.rs` is the game's character JSON, `transport.rs` handles USB serial and data-disk, and `main.rs` is the CLI.
@@ -39,7 +39,7 @@ CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on
 
 - The `+=`, `-=` and other compound operators are Playdate extensions. luacheck accepts them only through `.luacheckrc`.
 - In `drawText`, `*` and `_` are bold and italic markers. Double them (`**`, `__`) to print them literally, especially in user and D&D Beyond text.
-- `playdate.setMenuImage` shows only the left 200px of a 400×240 image.
+- `playdate.setMenuImage` shows only the left 200px of a 400×240 image, and it can't animate: the game is suspended while the system menu is open. Long text goes in the Rules viewer.
 - The screen is 1-bit: draw art in black and white (no grey), and dither if needed.
 - `pdc` warnings matter; a clean build prints nothing.
 
@@ -54,4 +54,4 @@ See the skills in `.github/skills/`: `playdate-device`, `playdate-simulator-harn
 
 ## Commits
 
-Use small, focused commits with imperative subjects. Run lint, the build and the tests before committing. Agent commits include the session's `Co-authored-by` trailer.
+Use small, focused commits with imperative subjects. PRs follow `.github/pull_request_template.md`; tick off its checklist, including the docs and docsite. Run lint, the build and the tests before committing. Agent commits include the session's `Co-authored-by` trailer.
