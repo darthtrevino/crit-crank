@@ -178,7 +178,7 @@ local PAGE <const> = {
 	SAVES = "Saving throws resist spells, traps and poisons. Roll d20 + modifier, plus proficiency if you're proficient, against the effect's DC.",
 	SKILLS = "Skills are ability checks you can be trained in. ● adds your proficiency bonus, ◉ (expertise) adds it twice.",
 	ACTIONS = "Your attacks, spells and features. Crank on an attack, then on its damage.",
-	STATUS = "Track HP, Hit Dice, spell slots and limited features. Rest from the menu to recover them.",
+	STATUS = "Track HP, Hit Dice, spell slots and limited features. Crank on a rest at the bottom to recover them.",
 	DICE = "Free rolls, plus a custom dice pool you can build.",
 }
 
@@ -251,6 +251,18 @@ local function describe(c, row, page)
 			title = "Spend Hit Die", sub = "d" .. c.hitDie .. " + CON",
 			body = "During a short rest, spend a Hit Die to heal d" .. c.hitDie ..
 				" + your CON modifier. You can spend as many as you have left, one at a time.",
+		}
+	elseif h.kind == "rest" and h.rest == "long" then
+		return {
+			title = "Long Rest", sub = "8 hours, once a day",
+			body = "Restores all HP, spell slots and limited-use features, and gives back half your total Hit Dice " ..
+				"(at least 1).\n\nCrank for a few moments to confirm.",
+		}
+	elseif h.kind == "rest" then
+		return {
+			title = "Short Rest", sub = "At least 1 hour",
+			body = "Recharges features that come back on a short rest. During it you can spend Hit Dice " ..
+				"to heal (the row under Hit Dice).\n\nCrank for a few moments to confirm.",
 		}
 	elseif h.kind == "pool" then
 		return {
