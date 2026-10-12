@@ -152,7 +152,8 @@ local function actionsPage(c)
 			}
 		elseif a.atk then
 			local ab = (a.atk == "spell") and c.spellAbility or a.atk
-			local hit = Sheet.mod(c.abilities[ab]) + pb
+			-- imported characters carry a precomputed `hit` (magic bonuses etc.)
+			local hit = a.hit or (Sheet.mod(c.abilities[ab]) + pb)
 			local crit = (a.atk ~= "spell") and c.critRange or 20
 			rows[#rows + 1] = {
 				kind = "roll", label = a.name, detail = a.note, value = signed(hit),
@@ -166,7 +167,7 @@ local function actionsPage(c)
 		else
 			local detail = a.note
 			if a.save then
-				local dc = 8 + pb + Sheet.mod(c.abilities[c.spellAbility])
+				local dc = a.dc or (8 + pb + Sheet.mod(c.abilities[c.spellAbility]))
 				detail = "DC" .. dc .. " " .. a.save:upper()
 			elseif a.auto then
 				detail = "auto-hit"

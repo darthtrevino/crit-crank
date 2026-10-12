@@ -8,6 +8,9 @@
 --   { name, auto = true, dmg, ... }               auto-hit damage
 --   { name, heal = "1d8+6", ... }                 healing
 --   { name, info = "text" }                       non-rollable note
+-- Optional overrides (used by imported characters):
+--   hit = 7   attack bonus instead of ability mod + proficiency
+--   dc = 13   save DC instead of 8 + proficiency + spellcasting mod
 -- Optional action costs (spent automatically when rolled):
 --   slot = 1        uses a spell slot of that level
 --   uses = "id"     uses a charge of a limited feature

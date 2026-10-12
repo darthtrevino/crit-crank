@@ -7,6 +7,7 @@ import "dice"
 import "dice3d"
 import "characters"
 import "resources"
+import "importer"
 import "sheet"
 import "ui"
 
@@ -37,7 +38,7 @@ local state = {
 	roll = nil,
 	preview = nil,  -- resting 3D dice for the selected row
 	res = nil,      -- tracked resources for the current character
-	allRes = {},    -- saved resources per character index
+	allRes = {},    -- saved resources per character key
 	lastCast = nil, -- actionKey of the last action that spent a resource
 	toast = nil,
 	toastFrames = 0,
@@ -275,10 +276,11 @@ local function adjustRow(row, delta)
 end
 
 local function loadCharacter(i)
-	if state.res then state.allRes[state.charIndex] = state.res end
+	if state.res then state.allRes[character().key] = state.res end
 	state.charIndex = i
-	state.res = Resources.load(Characters[i], state.allRes[i])
-	state.allRes[i] = state.res
+	local key = Characters[i].key
+	state.res = Resources.load(Characters[i], state.allRes[key])
+	state.allRes[key] = state.res
 	state.lastCast = nil
 	state.pages = Sheet.build(Characters[i])
 	refreshPool()
@@ -576,20 +578,40 @@ end
 
 function pd.BButtonUp() release("b") end
 
+-- Prebuilt heroes keep their list position as their key (matches old saves);
+-- imported heroes use "ddb<id>".
+local PREBUILT = {}
+for i, c in ipairs(Characters) do
+	c.key = tostring(i)
+	PREBUILT[i] = c
+end
+local imports = Importer.load()
+
+local function rebuildCharacters()
+	Characters = {}
+	for _, c in ipairs(PREBUILT) do Characters[#Characters + 1] = c end
+	for _, c in ipairs(imports) do Characters[#Characters + 1] = c end
+end
+rebuildCharacters()
+
+local function indexOfKey(key)
+	for i, c in ipairs(Characters) do
+		if c.key == key then return i end
+	end
+end
+
 local function save()
-	state.allRes[state.charIndex] = state.res
-	-- string keys: the datastore is JSON
-	local res = {}
-	for i, r in pairs(state.allRes) do res[tostring(i)] = r end
-	pd.datastore.write({ charIndex = state.charIndex, resources = res, pool = state.pool })
+	state.allRes[character().key] = state.res
+	pd.datastore.write({
+		charKey = character().key, resources = state.allRes, pool = state.pool,
+	})
 	state.dirty = false
 end
 
 local saved = pd.datastore.read()
 if saved and type(saved.resources) == "table" then
 	for k, r in pairs(saved.resources) do
-		local i = tonumber(k)
-		if i and Characters[i] then state.allRes[i] = r end
+		if type(k) == "string" and type(r) == "table" then state.allRes[k] = r end
 	end
 end
 if saved and type(saved.pool) == "table" then
@@ -597,26 +619,42 @@ if saved and type(saved.pool) == "table" then
 		if type(v) == "number" then state.pool[k] = math.floor(v) end
 	end
 end
-loadCharacter((saved and Characters[saved.charIndex or 0]) and saved.charIndex or 1)
-
-local names = {}
-for i, c in ipairs(Characters) do
-	names[i] = c.name:match("^(%S+)")
-	if names[i] == "Brother" then names[i] = c.name:match("(%S+)$") end
-end
+local savedKey = saved and (saved.charKey or (saved.charIndex and tostring(saved.charIndex)))
+loadCharacter(indexOfKey(savedKey) or 1)
 
 local menu = pd.getSystemMenu()
+local shortRest, longRest
 
-menu:addOptionsMenuItem("Hero", names, names[state.charIndex], function(choice)
-	for i, n in ipairs(names) do
-		if n == choice and i ~= state.charIndex then
-			loadCharacter(i)
-			save()
-		end
+-- Short names for the Hero menu, made unique.
+local function heroNames()
+	local names, seen = {}, {}
+	for i, c in ipairs(Characters) do
+		local n = c.name:match("^(%S+)") or c.name
+		if n == "Brother" or n == "Sister" then n = c.name:match("(%S+)$") end
+		if seen[n] then n = n .. " " .. i end
+		seen[n] = true
+		names[i] = n
 	end
-end)
+	return names
+end
 
-local function shortRest()
+local function buildMenu()
+	menu:removeAllMenuItems()
+	local names = heroNames()
+	menu:addOptionsMenuItem("Hero", names, names[state.charIndex], function(choice)
+		for i, n in ipairs(names) do
+			if n == choice and i ~= state.charIndex then
+				save()
+				loadCharacter(i)
+				save()
+			end
+		end
+	end)
+	menu:addMenuItem("Short Rest", shortRest)
+	menu:addMenuItem("Long Rest", longRest)
+end
+
+function shortRest()
 	local restored = Resources.shortRest(character(), state.res)
 	state.lastCast = nil
 	if #restored > 0 then
@@ -627,7 +665,7 @@ local function shortRest()
 	save()
 end
 
-local function longRest()
+function longRest()
 	local regained = Resources.longRest(character(), state.res)
 	state.lastCast = nil
 	state.critPending = false
@@ -635,8 +673,34 @@ local function longRest()
 	save()
 end
 
-menu:addMenuItem("Short Rest", shortRest)
-menu:addMenuItem("Long Rest", longRest)
+buildMenu()
+
+Importer.listen({
+	imported = function(c)
+		save()
+		Importer.upsert(imports, c)
+		Importer.save(imports)
+		rebuildCharacters()
+		loadCharacter(indexOfKey(c.key))
+		buildMenu()
+		save()
+		toast("Imported " .. c.name)
+	end,
+	removed = function(key)
+		if not Importer.remove(imports, key) then return false end
+		Importer.save(imports)
+		local current = character().key
+		save()
+		state.allRes[key] = nil
+		state.res = nil
+		rebuildCharacters()
+		loadCharacter(indexOfKey(current) or 1)
+		buildMenu()
+		save()
+		toast("Removed imported hero")
+		return true
+	end,
+})
 
 function pd.gameWillTerminate() save() end
 function pd.deviceWillSleep() save() end
