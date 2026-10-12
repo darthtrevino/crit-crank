@@ -165,8 +165,8 @@ local function firstSelectable(rows)
 	return 1
 end
 
-local function ensureVisible()
-	local p = state.page
+local function ensureVisible(p)
+	p = p or state.page
 	local rows = currentPage().rows
 	local sel = state.sel[p]
 	local scroll = state.scroll[p] or 0
@@ -215,12 +215,42 @@ local function getResource(key)
 	return Resources.get(character(), state.res, key)
 end
 
+-- A row's identity across rebuilds, so selection survives the STATUS page changing.
+local function rowId(row)
+	return row and (row.kind .. ":" .. (row.key or row.actionKey or "") .. ":" .. (row.label or ""))
+end
+
+local refreshPool
+
+-- Show or hide death save tracking when HP reaches or leaves 0.
+local function syncDying()
+	local dying = Resources.dying(state.res)
+	if not dying then Resources.clearDeath(state.res) end
+	if dying == state.dying then return end
+	state.dying = dying
+	local old = state.pages
+	state.pages = Sheet.build(character(), dying)
+	for p, page in ipairs(state.pages) do
+		local was = old[p] and old[p].rows[state.sel[p]]
+		local sel = firstSelectable(page.rows)
+		for i, r in ipairs(page.rows) do
+			if was and rowId(r) == rowId(was) then sel = i; break end
+		end
+		state.sel[p] = sel
+		-- bring the new Dying section into view
+		if dying and page.title == "STATUS" then state.scroll[p] = 0 end
+		ensureVisible(p)
+	end
+	refreshPool()
+end
+
 local function adjustResource(key, delta)
 	local before = state.res[key]
 	local after = Resources.add(character(), state.res, key, delta)
 	if after ~= before then
 		state.dirty = true
 		tickSynth:playNote(delta > 0 and 900 or 500, 0.1, 0.02)
+		if key == "hp" then syncDying() end
 	end
 end
 
@@ -251,7 +281,7 @@ local function poolDiceCount()
 end
 
 -- Push the pool into the "Roll pool" row.
-local function refreshPool()
+function refreshPool()
 	for _, page in ipairs(state.pages) do
 		for _, row in ipairs(page.rows) do
 			if row.pool then
@@ -309,7 +339,8 @@ local function loadCharacter(i)
 	state.res = Resources.load(Characters[i], state.allRes[key])
 	state.allRes[key] = state.res
 	state.lastCast = nil
-	state.pages = Sheet.build(Characters[i])
+	state.dying = Resources.dying(state.res)
+	state.pages = Sheet.build(Characters[i], state.dying)
 	refreshPool()
 	state.sel, state.scroll = {}, {}
 	for p, page in ipairs(state.pages) do
@@ -462,6 +493,12 @@ local function finishLanding()
 		local after = Resources.add(c, state.res, "hp", math.max(0, roll.result.total))
 		state.dirty = true
 		toast("Healed " .. (after - before) .. " HP (" .. after .. "/" .. c.hp .. ")")
+		syncDying()
+	end
+	if roll.row.deathSave and Resources.dying(state.res) then
+		toast(Resources.deathSave(character(), state.res, roll.result))
+		state.dirty = true
+		syncDying()
 	end
 	playLand(roll.result)
 	-- dice pools (Dice page) stay quiet
@@ -696,6 +733,7 @@ function longRest()
 	local regained = Resources.longRest(character(), state.res)
 	state.lastCast = nil
 	state.critPending = false
+	syncDying()
 	toast("Long rest: fully restored, +" .. regained .. " Hit Dice")
 	save()
 end

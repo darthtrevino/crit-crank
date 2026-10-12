@@ -1,9 +1,12 @@
 -- Per-character tracked resources: HP, hit dice, spell slots, feature uses.
 --
 -- State is a flat table keyed by resource id:
---   hp, hitDice, slot1..slotN, and each feature id.
+--   hp, hitDice, deathSaves, deathFails, slot1..slotN, and each feature id.
 
 Resources = {}
+
+-- Death save counters start empty instead of full.
+local DEATH <const> = { deathSaves = "Death save successes", deathFails = "Death save failures" }
 
 local function featureById(c, id)
 	for _, f in ipairs(c.features or {}) do
@@ -14,6 +17,7 @@ end
 function Resources.max(c, key)
 	if key == "hp" then return c.hp end
 	if key == "hitDice" then return c.level end
+	if DEATH[key] then return 3 end
 	local lvl = key:match("^slot(%d+)$")
 	if lvl then return (c.slots or {})[tonumber(lvl)] or 0 end
 	local f = featureById(c, key)
@@ -23,6 +27,7 @@ end
 function Resources.label(c, key)
 	if key == "hp" then return "Hit Points" end
 	if key == "hitDice" then return "Hit Dice" end
+	if DEATH[key] then return DEATH[key] end
 	local lvl = key:match("^slot(%d+)$")
 	if lvl then return "Level " .. lvl .. " slot" end
 	local f = featureById(c, key)
@@ -30,7 +35,7 @@ function Resources.label(c, key)
 end
 
 function Resources.keys(c)
-	local keys = { "hp", "hitDice" }
+	local keys = { "hp", "hitDice", "deathSaves", "deathFails" }
 	for lvl in ipairs(c.slots or {}) do keys[#keys + 1] = "slot" .. lvl end
 	for _, f in ipairs(c.features or {}) do keys[#keys + 1] = f.id end
 	return keys
@@ -38,7 +43,7 @@ end
 
 function Resources.fresh(c)
 	local r = {}
-	for _, k in ipairs(Resources.keys(c)) do r[k] = Resources.max(c, k) end
+	for _, k in ipairs(Resources.keys(c)) do r[k] = DEATH[k] and 0 or Resources.max(c, k) end
 	return r
 end
 
@@ -51,6 +56,7 @@ function Resources.load(c, saved)
 			if v then r[k] = math.max(0, math.min(max, math.floor(v))) end
 		end
 	end
+	if r.hp > 0 then Resources.clearDeath(r) end
 	return r
 end
 
@@ -72,6 +78,33 @@ function Resources.spend(c, r, key)
 	return true
 end
 
+function Resources.dying(r)
+	return r.hp == 0
+end
+
+function Resources.clearDeath(r)
+	r.deathSaves, r.deathFails = 0, 0
+end
+
+-- Records a death save roll at 0 HP; returns a short outcome message.
+function Resources.deathSave(c, r, result)
+	local n = result.natural
+	if n == 20 then
+		r.hp = math.min(1, c.hp)
+		Resources.clearDeath(r)
+		return "Natural 20! Back up with 1 HP"
+	end
+	local fails = n == 1 and 2 or (result.total >= 10 and 0 or 1)
+	if fails > 0 then
+		Resources.add(c, r, "deathFails", fails)
+	else
+		Resources.add(c, r, "deathSaves", 1)
+	end
+	if r.deathFails >= 3 then return "Three failures: you have died" end
+	if r.deathSaves >= 3 then return "Three successes: you're stable" end
+	return fails > 0 and ("Failure (" .. r.deathFails .. "/3)") or ("Success (" .. r.deathSaves .. "/3)")
+end
+
 -- Short rest: restores features that recharge on a short rest.
 -- (Hit dice are spent separately via the "Spend Hit Die" roll.)
 function Resources.shortRest(c, r)
@@ -89,6 +122,7 @@ end
 function Resources.longRest(c, r)
 	local before = r.hitDice
 	r.hp = c.hp
+	Resources.clearDeath(r)
 	r.hitDice = math.min(c.level, r.hitDice + math.max(1, math.floor(c.level / 2)))
 	for lvl, max in ipairs(c.slots or {}) do r["slot" .. lvl] = max end
 	for _, f in ipairs(c.features or {}) do r[f.id] = f.max end
