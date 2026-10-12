@@ -8,6 +8,8 @@ description: Take automated screenshots or run scripted input in the Playdate Si
 The Simulator has no CLI automation, so the harness runs inside the game.
 
 ## Setup (temporary, never commit)
+0. Take the Simulator lock first (`playdate-simulator` skill):
+   `.github/skills/playdate-simulator/scripts/simlock.sh acquire`. If it's busy, stop and tell the user.
 1. Back up the save data, since the harness will change it:
    `cp -R ~/Developer/PlaydateSDK/Disk/Data/com.christrevino.charsheet /tmp/cs-data-bak`
 2. Create `charsheet/source/devshots.lua`. Its update hook steps through a script of actions, one per N frames: set page or selection, start a roll, open the pause menu.
@@ -25,6 +27,7 @@ The Simulator has no CLI automation, so the harness runs inside the game.
 - Delete `devshots.lua` and every `-- DEVTEMP` line (`grep -rn DEVTEMP charsheet/source` must return nothing).
 - Restore the save data from `/tmp/cs-data-bak`.
 - Rebuild and lint to confirm a clean tree.
+- Release the lock: `.github/skills/playdate-simulator/scripts/simlock.sh release`.
 
 ## Notes
 - The Simulator holds the device's serial port while it runs. Quit it before deploying to hardware.
