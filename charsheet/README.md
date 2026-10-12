@@ -64,9 +64,9 @@ The hero is selected straight away and stays in the Hero menu. Importing the sam
 - `source/sheet.lua`: works out modifiers and bonuses and builds the rows for each page
 - `source/dice.lua`: dice notation parser and roller (`3d4+3`, `4d6kh3`, advantage, crits)
 - `source/dice3d.lua`: flat-shaded 3D polyhedra (d4–d20) with quaternion spin and slerp landing
-- `source/rules.lua`: rule text for the pause screen
-- `source/ui.lua`: drawing (header, tabs, list, dice tray, toasts, pause-screen card)
-- `source/main.lua`: input, crank roll logic, resource spending, rests, sound, saving, and the main loop
+- `source/rules.lua`: rule text for the pause screen and the Rules viewer
+- `source/ui.lua`: drawing (header, tabs, list, dice tray, toasts, pause-screen card, Rules viewer)
+- `source/main.lua`: input, crank roll logic, the Rules viewer, resource spending, rests, sound, saving, and the main loop
 
 ## License
 

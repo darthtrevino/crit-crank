@@ -15,7 +15,7 @@ A D&D 5e character sheet for [Playdate](https://play.date). Pick an ability, sav
 
 | Path | What |
 | --- | --- |
-| [`charsheet/`](charsheet) | The Playdate game (Lua). Prebuilt heroes, 3D dice, dice pools, rests, resource tracking, and rule text on the pause screen. |
+| [`charsheet/`](charsheet) | The Playdate game (Lua). Prebuilt heroes, 3D dice, dice pools, rests, resource tracking, and rule text on the pause screen with a scrolling Rules viewer. |
 | [`charsync/`](charsync) | Rust CLI (macOS/Windows/Linux) that imports your D&D Beyond characters onto the device over USB. |
 | [`site/`](site) | The GitHub Pages showcase, with an interactive in-browser demo. |
 | [`AGENTS.md`](AGENTS.md), [`.github/skills/`](.github/skills) | Notes and skills for AI coding agents working in this repo. |

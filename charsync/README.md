@@ -36,7 +36,7 @@ Global options: `--port <path>` picks the serial port, and `-v` logs serial traf
 
 ## What's converted
 
-Ability scores (racial/feat/item bonuses, set scores, overrides), saves, skill proficiency/expertise, HP, AC (armor, shield, Unarmored Defense, bonuses), speed, Hit Die, spell slots (including multiclass and Pact Magic), equipped weapons (finesse/ranged, proficiency, magic bonuses), damaging and healing spells (prepared ones, cantrips scaled by level), and limited-use features with their short/long rest resets. Improved/Superior Critical and the halfling Lucky trait are detected too. Spells and features also bring along their D&D Beyond description (as plain text, up to 400 characters), which shows on the pause screen.
+Ability scores (racial/feat/item bonuses, set scores, overrides), saves, skill proficiency/expertise, HP, AC (armor, shield, Unarmored Defense, bonuses), speed, Hit Die, spell slots (including multiclass and Pact Magic), equipped weapons (finesse/ranged, proficiency, magic bonuses), damaging and healing spells (prepared ones, cantrips scaled by level), and limited-use features with their short/long rest resets. Improved/Superior Critical and the halfling Lucky trait are detected too. Spells and features also bring along their D&D Beyond description (as plain text, up to 400 characters), which shows on the pause screen and in the Rules viewer.
 
 Utility spells and features with nothing to roll are left out.
 
