@@ -13,7 +13,7 @@ Guidance for AI coding agents working on Crit Crank. Read this before you change
   - `characters.lua` has the prebuilt heroes; `importer.lua` takes in heroes from charsync.
   - `launcher/` holds the 1-bit card and icon art.
 - `charsync/`: Rust CLI. `ddb.rs` converts D&D Beyond JSON, `model.rs` is the game's character JSON, `transport.rs` handles USB serial and data-disk, and `main.rs` is the CLI.
-- `site/`: static GitHub Pages site. No build step: plain HTML, CSS and JS. `demo.js` is a browser imitation of the game.
+- `site/`: static GitHub Pages site. No build step: plain HTML, CSS and ES modules. `sim/*.js` is a JavaScript port of the game (one module per Lua file) that draws 1-bit onto a 400×240 canvas; keep it in step with game behavior changes. `docs.html` is the full manual.
 
 ## Commands
 

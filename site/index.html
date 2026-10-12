@@ -11,7 +11,7 @@
 	<meta name="theme-color" content="#ffc500">
 	<link rel="icon" href="assets/icon.png">
 	<link rel="stylesheet" href="style.css">
-	<script src="demo.js" defer></script>
+	<script type="module" src="sim/main.js"></script>
 </head>
 <body>
 	<a class="skip" href="#main">Skip to content</a>
@@ -21,6 +21,7 @@
 		<p class="lede">Crit Crank turns a <a href="https://play.date">Playdate</a> into a D&amp;D&nbsp;5e character sheet. Pick an ability, save, skill or attack, then turn the crank to roll real 3D dice.</p>
 		<div class="cta">
 			<a class="btn primary" href="https://github.com/darthtrevino/crit-crank/releases/latest/download/crit-crank.pdx.zip">Download for Playdate</a>
+			<a class="btn" href="docs.html">Read the manual</a>
 			<a class="btn" href="https://github.com/darthtrevino/crit-crank">View on GitHub</a>
 		</div>
 	</header>
@@ -28,39 +29,39 @@
 	<main id="main">
 		<section class="demo" aria-labelledby="demo-title">
 			<h2 id="demo-title">Try it</h2>
-			<p class="hint">Drag the crank, scroll over it, or press Ⓐ (<kbd>A</kbd> key) to quick-roll. Ⓑ (<kbd>B</kbd>) cycles advantage. Use the <kbd>↑</kbd><kbd>↓</kbd> keys to pick a row and <kbd>←</kbd><kbd>→</kbd> to switch pages. Sound is on, so listen for a natural 20.</p>
-			<div class="device">
-				<div class="screen" id="screen" role="application" aria-label="Crit Crank demo screen" tabindex="0">
-					<div class="hdr"><span><b>Brenna Stoutheart</b> <small>Lv3 Fighter</small></span><span>AC 18 HP 31/31 25ft</span></div>
-					<div class="tabs" id="tabs"></div>
-					<div class="body">
-						<ul class="list" id="list"></ul>
-						<div class="tray" aria-live="polite">
-							<div class="tray-title" id="trayTitle"></div>
-							<div class="tray-spec" id="traySpec"></div>
-							<svg class="die" id="die" viewBox="-50 -50 100 100" aria-hidden="true"></svg>
-							<div class="total" id="total"></div>
-							<div class="note" id="note">Crank to roll</div>
-						</div>
+			<p class="hint">This is the real game, ported to your browser. Drag the crank in a circle (or scroll over the screen) to roll. Click the buttons or use the keys: <kbd>↑</kbd><kbd>↓</kbd> pick a row, <kbd>←</kbd><kbd>→</kbd> switch pages, <kbd>X</kbd> is Ⓐ (quick-roll), <kbd>Z</kbd> is Ⓑ (advantage), <kbd>[</kbd><kbd>]</kbd> turn the crank and <kbd>Esc</kbd> is Menu.</p>
+			<div class="pd" data-sim>
+				<div class="pd-body">
+					<span class="pd-lock" aria-hidden="true"></span>
+					<button class="pd-menu" data-btn="menu" aria-label="Menu button: pause screen, hero and rules"></button>
+					<div class="pd-bezel">
+						<canvas class="pd-screen" width="400" height="240" role="img" aria-label="Crit Crank running on a Playdate screen"></canvas>
 					</div>
-					<div class="ftr"><span>◀▶ page ▲▼ select ⟳ roll</span><span>Ⓑ normal</span></div>
+					<span class="pd-logo" aria-hidden="true">playdate</span>
+					<div class="pd-dpad" role="group" aria-label="D-pad">
+						<button class="up" data-btn="up" aria-label="Up"></button>
+						<button class="left" data-btn="left" aria-label="Left"></button>
+						<button class="right" data-btn="right" aria-label="Right"></button>
+						<button class="down" data-btn="down" aria-label="Down"></button>
+						<span class="hub" aria-hidden="true"></span>
+					</div>
+					<button class="pd-ab pd-b" data-btn="b" aria-label="B button">B</button>
+					<button class="pd-ab pd-a" data-btn="a" aria-label="A button">A</button>
+					<span class="pd-speaker" aria-hidden="true"></span>
 				</div>
-				<div class="controls">
-					<div class="dpad" aria-label="D-pad">
-						<button class="up" data-key="ArrowUp" aria-label="Up">▲</button>
-						<button class="left" data-key="ArrowLeft" aria-label="Left">◀</button>
-						<button class="right" data-key="ArrowRight" aria-label="Right">▶</button>
-						<button class="down" data-key="ArrowDown" aria-label="Down">▼</button>
-					</div>
-					<div class="ab">
-						<button data-key="b" aria-label="B button">B</button>
-						<button data-key="a" aria-label="A button: roll">A</button>
-					</div>
-				</div>
-				<div class="crank" id="crank" role="slider" tabindex="0" aria-label="Crank: drag or use arrow keys to roll" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0">
-					<div class="arm" id="arm"><div class="knob"></div></div>
+				<div class="pd-crank" role="slider" tabindex="0" aria-label="Crank: drag in a circle, scroll, or press [ and ] to turn" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0">
+					<span class="pd-crank-hub" aria-hidden="true"></span>
+					<span class="pd-crank-arm" aria-hidden="true"></span>
+					<span class="pd-crank-knob" aria-hidden="true"></span>
 				</div>
 			</div>
+			<div class="sim-tools">
+				<button class="chip" type="button" data-sim-focus="STATUS|Short Rest">Try crank-to-rest</button>
+				<button class="chip" type="button" data-sim-focus="DICE">Build a dice pool</button>
+				<button class="chip" type="button" data-mute aria-pressed="false">Sound on</button>
+				<button class="chip" type="button" data-reset>Reset demo</button>
+			</div>
+			<p class="hint small">Want every control and rule? Read the <a href="docs.html">full manual</a>.</p>
 		</section>
 
 		<section aria-labelledby="features-title">
