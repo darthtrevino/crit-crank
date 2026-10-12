@@ -81,6 +81,9 @@ pub struct Feature {
     pub max: i32,
     /// "short" or "long"
     pub reset: String,
+    /// Rule text shown on the pause screen.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub rule: Option<String>,
 }
 
 /// One row (or row group) on the ACTIONS page. Exactly one of
@@ -120,6 +123,9 @@ pub struct Action {
     pub uses: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub critable: Option<bool>,
+    /// Rule text shown on the pause screen.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rule: Option<String>,
 }
 
 impl Action {

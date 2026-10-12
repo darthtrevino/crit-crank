@@ -72,7 +72,7 @@ function Importer.normalize(raw)
 		if type(f) == "table" and str(f.id) and num(f.max, 0) > 0 then
 			c.features[#c.features + 1] = {
 				id = f.id, name = str(f.name, f.id), max = num(f.max, 1),
-				reset = f.reset == "short" and "short" or "long",
+				reset = f.reset == "short" and "short" or "long", rule = str(f.rule),
 			}
 		end
 	end

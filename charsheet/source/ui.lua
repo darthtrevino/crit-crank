@@ -395,3 +395,36 @@ function UI.drawFooter(mode, toast)
 	drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, UI.FOOTER_Y + 2)
 	drawText(fonts.small, "Ⓑ " .. modeText, UI.W - 6, UI.FOOTER_Y + 2, "right")
 end
+
+---------------------------------------------------------------- pause card
+
+-- Renders rule text into the 200px the system menu leaves visible.
+function UI.drawRuleCard(title, sub, body)
+	local img = gfx.image.new(400, 240, gfx.kColorWhite)
+	local X, W = 10, 180
+	gfx.pushContext(img)
+	gfx.setColor(gfx.kColorBlack)
+	gfx.fillRect(0, 0, 200, 30)
+	gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+	drawText(fonts.title, fit(fonts.title, title, W), X, 8)
+	gfx.setImageDrawMode(gfx.kDrawModeCopy)
+	local y = 36
+	if sub ~= "" then
+		drawText(fonts.small, fit(fonts.small, sub, W), X, y)
+		y += 16
+		gfx.setDitherPattern(0.5)
+		gfx.drawLine(X, y, X + W, y)
+		gfx.setColor(gfx.kColorBlack)
+		y += 6
+	end
+	local h = 236 - y
+	local font = fonts.body
+	local _, need = gfx.getTextSizeForMaxWidth(body, W, nil, font)
+	if need > h then font = fonts.small end
+	gfx.setFont(font)
+	gfx.drawTextInRect(body, X, y, W, h, nil, "…")
+	gfx.setColor(gfx.kColorBlack)
+	gfx.drawLine(199, 0, 199, 240)
+	gfx.popContext()
+	return img
+end

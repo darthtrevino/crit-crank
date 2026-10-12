@@ -153,6 +153,40 @@ pub fn ascii(s: &str) -> String {
     out.trim().to_string()
 }
 
+/// Plain-text rule summary from a D&D Beyond snippet or HTML description.
+fn rule_text(v: &Value) -> Option<String> {
+    const MAX: usize = 400;
+    let src = text(&v["snippet"]).or_else(|| text(&v["description"]))?;
+    let mut plain = String::with_capacity(src.len());
+    let (mut in_tag, mut braces) = (false, 0);
+    let mut chars = src.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '<' => in_tag = true,
+            '>' if in_tag => { in_tag = false; plain.push(' ') }
+            _ if in_tag => {}
+            // DDB templates like {{scalevalue}} can't be evaluated here
+            '{' if chars.peek() == Some(&'{') => { chars.next(); braces += 1; if braces == 1 { plain.push('X') } }
+            '}' if braces > 0 && chars.peek() == Some(&'}') => { chars.next(); braces -= 1 }
+            _ if braces > 0 => {}
+            _ => plain.push(c),
+        }
+    }
+    let plain = plain
+        .replace("&nbsp;", " ").replace("&rsquo;", "'").replace("&lsquo;", "'")
+        .replace("&ldquo;", "\"").replace("&rdquo;", "\"").replace("&mdash;", "-")
+        .replace("&ndash;", "-").replace("&quot;", "\"").replace("&#39;", "'")
+        .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&");
+    let words: Vec<&str> = plain.split_whitespace().collect();
+    let mut out = ascii(&words.join(" "));
+    if out.len() > MAX {
+        let cut = out[..MAX].rfind(' ').unwrap_or(MAX);
+        out.truncate(cut);
+        out.push_str("...");
+    }
+    (!out.is_empty()).then_some(out)
+}
+
 fn camel_id(name: &str) -> String {
     let mut out = String::new();
     for (i, word) in name.split(|c: char| !c.is_ascii_alphanumeric()).filter(|w| !w.is_empty()).enumerate() {
@@ -530,7 +564,7 @@ impl<'a> Ctx<'a> {
                         let id = camel_id(&name);
                         if ids.insert(id.clone()) {
                             let reset = if int(&lu["resetType"]) == Some(1) { "short" } else { "long" };
-                            features.push(Feature { id: id.clone(), name: name.clone(), max, reset: reset.into() });
+                            features.push(Feature { id: id.clone(), name: name.clone(), max, reset: reset.into(), rule: rule_text(a) });
                         }
                         uses = Some(id);
                     }
@@ -545,7 +579,7 @@ impl<'a> Ctx<'a> {
                     let f = features.iter().find(|f| Some(&f.id) == uses.as_ref());
                     f.map(|f| format!("{}/{}", f.max, if f.reset == "short" { "SR" } else { "LR" })).unwrap_or_default()
                 });
-                let mut row = Action { name: Some(name), note, uses, ..Default::default() };
+                let mut row = Action { name: Some(name), note, uses, rule: rule_text(a), ..Default::default() };
                 if healing {
                     row.heal = Some(expr);
                     row.self_heal = Some(true);
@@ -653,12 +687,12 @@ impl<'a> Ctx<'a> {
                 if level > 0 && lu.is_object() && int(&lu["maxUses"]).unwrap_or(0) > 0 {
                     let id = camel_id(&name);
                     let reset = if int(&lu["resetType"]) == Some(1) { "short" } else { "long" };
-                    features.push(Feature { id: id.clone(), name: name.clone(), max: int(&lu["maxUses"]).unwrap_or(1), reset: reset.into() });
+                    features.push(Feature { id: id.clone(), name: name.clone(), max: int(&lu["maxUses"]).unwrap_or(1), reset: reset.into(), rule: None });
                     uses = Some(id);
                 }
                 let slot = if level > 0 && uses.is_none() { Some(level) } else { None };
 
-                let mut row = Action { name: Some(name), note, slot, uses, ..Default::default() };
+                let mut row = Action { name: Some(name), note, slot, uses, rule: rule_text(def), ..Default::default() };
                 if let Some(h) = heal.filter(|_| damage.is_empty()) {
                     row.heal = Some(h);
                 } else {
@@ -784,6 +818,11 @@ mod tests {
         assert_eq!(camel_id("Favored Foe"), "favoredFoe");
         assert_eq!(dice_plus("1d8", -1), "1d8-1");
         assert_eq!(modifier(9), -1);
+        let v = serde_json::json!({"description": "<p>Regain {{scalevalue}} hit points&nbsp;&mdash; once.</p>"});
+        assert_eq!(rule_text(&v).as_deref(), Some("Regain X hit points - once."));
+        let v = serde_json::json!({"snippet": "a ".repeat(300)});
+        assert!(rule_text(&v).unwrap().len() <= 403);
+        assert_eq!(rule_text(&serde_json::json!({})), None);
     }
 
     fn wizard() -> Value {

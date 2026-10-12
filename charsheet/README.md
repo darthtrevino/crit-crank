@@ -25,6 +25,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 | Menu → Hero | Switch character, prebuilt or imported (remembered between launches) |
 | Menu → Short Rest | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
 | Menu → Long Rest | Full HP, all spell slots and features, regain half your Hit Dice (min 1) |
+| Menu (pause) | The left side of the pause screen explains the selected row: what the ability, save, skill, spell, feature or resource does, and how its bonus adds up (e.g. "+5 = STR +3, prof +2") |
 
 ## Rules handled
 
@@ -58,5 +59,6 @@ The hero is selected straight away and stays in the Hero menu. Importing the sam
 - `source/sheet.lua`: works out modifiers and bonuses and builds the rows for each page
 - `source/dice.lua`: dice notation parser and roller (`3d4+3`, `4d6kh3`, advantage, crits)
 - `source/dice3d.lua`: flat-shaded 3D polyhedra (d4–d20) with quaternion spin and slerp landing
-- `source/ui.lua`: drawing (header, tabs, list, dice tray, toasts)
+- `source/rules.lua`: rule text for the pause screen
+- `source/ui.lua`: drawing (header, tabs, list, dice tray, toasts, pause-screen card)
 - `source/main.lua`: input, crank roll logic, resource spending, rests, sound, saving, and the main loop

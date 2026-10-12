@@ -9,6 +9,7 @@ import "characters"
 import "resources"
 import "importer"
 import "sheet"
+import "rules"
 import "ui"
 
 local pd <const> = playdate
@@ -704,6 +705,12 @@ Importer.listen({
 
 function pd.gameWillTerminate() save() end
 function pd.deviceWillSleep() save() end
+
+-- The left half of the pause screen explains the selected row.
+function pd.gameWillPause()
+	local d = Rules.describe(character(), selectedRow(), currentPage())
+	pd.setMenuImage(UI.drawRuleCard(Rules.plain(d.title or ""), Rules.plain(d.sub or ""), Rules.plain(d.body or "")))
+end
 
 ---------------------------------------------------------------- main loop
 

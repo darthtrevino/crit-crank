@@ -75,7 +75,7 @@ local function abilitiesPage(c)
 		rows[#rows + 1] = {
 			kind = "roll", label = Sheet.ABILITY_NAMES[ab], detail = tostring(score),
 			value = signed(m), spec = Dice.check(m), rollKind = "check",
-			title = Sheet.ABILITY_NAMES[ab] .. " check",
+			title = Sheet.ABILITY_NAMES[ab] .. " check", help = { kind = "ability", ab = ab },
 		}
 	end
 	local dexMod = Sheet.mod(c.abilities.dex)
@@ -83,15 +83,15 @@ local function abilitiesPage(c)
 	rows[#rows + 1] = { kind = "header", label = "Combat" }
 	rows[#rows + 1] = {
 		kind = "roll", label = "Initiative", value = signed(dexMod),
-		spec = Dice.check(dexMod), rollKind = "check",
+		spec = Dice.check(dexMod), rollKind = "check", help = { kind = "initiative" },
 	}
-	rows[#rows + 1] = { kind = "info", label = "Proficiency Bonus", value = signed(Sheet.proficiency(c.level)) }
-	rows[#rows + 1] = { kind = "info", label = "Passive Perception", value = tostring(passive) }
+	rows[#rows + 1] = { kind = "info", label = "Proficiency Bonus", value = signed(Sheet.proficiency(c.level)), help = { kind = "pb" } }
+	rows[#rows + 1] = { kind = "info", label = "Passive Perception", value = tostring(passive), help = { kind = "passive" } }
 	if c.spellAbility then
 		local pb = Sheet.proficiency(c.level)
 		local sm = Sheet.mod(c.abilities[c.spellAbility])
-		rows[#rows + 1] = { kind = "info", label = "Spell Save DC", value = tostring(8 + pb + sm) }
-		rows[#rows + 1] = { kind = "info", label = "Spell Attack", value = signed(pb + sm) }
+		rows[#rows + 1] = { kind = "info", label = "Spell Save DC", value = tostring(8 + pb + sm), help = { kind = "spelldc" } }
+		rows[#rows + 1] = { kind = "info", label = "Spell Attack", value = signed(pb + sm), help = { kind = "spellatk" } }
 	end
 	return { title = "ABILITY", rows = rows }
 end
@@ -105,13 +105,13 @@ local function savesPage(c)
 		rows[#rows + 1] = {
 			kind = "roll", label = Sheet.ABILITY_NAMES[ab], value = signed(b),
 			mark = prof and "prof" or "none", spec = Dice.check(b), rollKind = "check",
-			title = Sheet.ABILITY_NAMES[ab] .. " save",
+			title = Sheet.ABILITY_NAMES[ab] .. " save", help = { kind = "save", ab = ab, prof = prof },
 		}
 	end
 	rows[#rows + 1] = { kind = "header", label = "Other" }
 	rows[#rows + 1] = {
 		kind = "roll", label = "Death Save", detail = "10+ ok", value = "d20",
-		spec = Dice.check(0), rollKind = "check",
+		spec = Dice.check(0), rollKind = "check", help = { kind = "death" },
 	}
 	return { title = "SAVES", rows = rows }
 end
@@ -125,6 +125,7 @@ local function skillsPage(c)
 			kind = "roll", label = name, detail = ab:upper(), value = signed(b),
 			mark = (level == 2 and "exp") or (level == 1 and "prof") or "none",
 			spec = Dice.check(b), rollKind = "check",
+			help = { kind = "skill", key = key, ab = ab, level = level },
 		}
 	end
 	return { title = "SKILLS", rows = rows }
@@ -144,11 +145,11 @@ local function actionsPage(c)
 		if a.section then
 			rows[#rows + 1] = { kind = "header", label = a.section }
 		elseif a.info then
-			rows[#rows + 1] = { kind = "info", label = a.name, value = a.info }
+			rows[#rows + 1] = { kind = "info", label = a.name, value = a.info, help = { kind = "info", action = a } }
 		elseif a.heal then
 			rows[#rows + 1] = {
 				kind = "roll", label = a.name, detail = a.note, value = a.heal,
-				spec = Dice.parse(a.heal), rollKind = "heal",
+				spec = Dice.parse(a.heal), rollKind = "heal", help = { kind = "heal", action = a },
 			}
 		elseif a.atk then
 			local ab = (a.atk == "spell") and c.spellAbility or a.atk
@@ -158,11 +159,12 @@ local function actionsPage(c)
 			rows[#rows + 1] = {
 				kind = "roll", label = a.name, detail = a.note, value = signed(hit),
 				spec = Dice.check(hit, crit), rollKind = "check", title = a.name .. " attack",
+				help = { kind = "attack", action = a },
 			}
 			rows[#rows + 1] = {
 				kind = "roll", label = a.type or "damage", value = a.dmg, indent = true,
 				spec = Dice.parse(a.dmg), rollKind = "damage", critable = true,
-				title = a.name .. " damage",
+				title = a.name .. " damage", help = { kind = "damage", action = a },
 			}
 		else
 			local detail = a.note
@@ -176,6 +178,7 @@ local function actionsPage(c)
 				kind = "roll", label = a.name, detail = detail, value = a.dmg,
 				spec = Dice.parse(a.dmg), rollKind = "damage", critable = a.critable,
 				title = a.name .. (a.type and (" (" .. a.type .. ")") or ""),
+				help = { kind = a.save and "spellSave" or "auto", action = a },
 			}
 		end
 		local rollRows = 0
@@ -205,7 +208,7 @@ local function statusPage(c)
 	rows[#rows + 1] = {
 		kind = "roll", label = "Spend Hit Die", value = expr, spec = Dice.parse(expr),
 		rollKind = "heal", cost = { key = "hitDice", strict = true, each = true }, selfHeal = true,
-		actionKey = "hitDie", indent = true,
+		actionKey = "hitDie", indent = true, help = { kind = "spendHitDie" },
 	}
 	if c.slots and #c.slots > 0 then
 		rows[#rows + 1] = { kind = "header", label = "Spell Slots" }
@@ -231,25 +234,29 @@ local function dicePage()
 	-- spec/value are filled in by main.lua from the current pool
 	rows[#rows + 1] = {
 		kind = "roll", label = "Roll pool", spec = Dice.parse("0"), rollKind = "pool", pool = true,
+		help = { kind = "pool" },
 	}
 	for _, s in ipairs(Sheet.POOL_SIDES) do
-		rows[#rows + 1] = { kind = "counter", key = "d" .. s, label = "d" .. s, indent = true }
+		rows[#rows + 1] = { kind = "counter", key = "d" .. s, label = "d" .. s, indent = true, help = { kind = "counter" } }
 	end
-	rows[#rows + 1] = { kind = "counter", key = "bonus", label = "Modifier", indent = true }
+	rows[#rows + 1] = { kind = "counter", key = "bonus", label = "Modifier", indent = true, help = { kind = "counter" } }
 	rows[#rows + 1] = { kind = "header", label = "Quick rolls" }
-	local function add(label, expr, value)
+	local function add(label, expr, value, text)
 		local spec = Dice.parse(expr)
 		if expr == "1d20" then spec.check = true end
 		rows[#rows + 1] = {
 			kind = "roll", label = label, value = value, spec = spec, rollKind = "pool",
+			help = { kind = "quick", expr = expr, text = text },
 		}
 	end
 	for _, s in ipairs({ 4, 6, 8, 10, 12, 20, 100 }) do
 		add("d" .. s, "1d" .. s)
 	end
 	add("2d6", "2d6")
-	add("Ability score", "4d6kh3", "4d6 drop 1")
-	add("Fireball", "8d6", "8d6")
+	add("Ability score", "4d6kh3", "4d6 drop 1",
+		"Roll 4d6 and drop the lowest die. Do it six times to generate ability scores.")
+	add("Fireball", "8d6", "8d6",
+		"The classic 3rd-level spell: 8d6 fire in a 20-foot radius, DEX save for half.")
 	return { title = "DICE", rows = rows }
 end
 
