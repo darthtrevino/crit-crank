@@ -11,6 +11,7 @@
 --     selfHeal: apply the rolled total to current HP
 --   resource: { kind="resource", key, label, detail }  live tracked counter
 --   counter:  { kind="counter", key, label }  custom dice pool builder entry
+--   rest:     { kind="rest", key="short"|"long", label, detail }  crank to confirm a rest
 
 Sheet = {}
 
@@ -222,6 +223,15 @@ local function statusPage(c)
 			rows[#rows + 1] = { kind = "resource", key = f.id, label = f.name, detail = f.reset }
 		end
 	end
+	rows[#rows + 1] = { kind = "header", label = "Rest" }
+	rows[#rows + 1] = {
+		kind = "rest", key = "short", label = "Short Rest", detail = "1 hour",
+		help = { kind = "rest", rest = "short" },
+	}
+	rows[#rows + 1] = {
+		kind = "rest", key = "long", label = "Long Rest", detail = "8 hours",
+		help = { kind = "rest", rest = "long" },
+	}
 	return { title = "STATUS", rows = rows }
 end
 

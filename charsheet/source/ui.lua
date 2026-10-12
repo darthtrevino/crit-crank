@@ -302,6 +302,29 @@ function UI.drawTray(t)
 		return
 	end
 
+	if row.kind == "rest" then
+		drawText(fonts.small, row.detail, TRAY_CX, y + 16, "center")
+		local lines = row.key == "long"
+			and { "Full HP, spell slots", "and features, half", "your Hit Dice back" }
+			or { "Recharge short-rest", "features, then spend", "Hit Dice to heal" }
+		for i, l in ipairs(lines) do
+			drawText(fonts.small, l, TRAY_CX, y + 38 + (i - 1) * 15, "center")
+		end
+		local rest = t.rest
+		local barW, barY = TRAY_W - 16, y + 100
+		local barX = TRAY_CX - barW / 2
+		gfx.setColor(gfx.kColorBlack)
+		gfx.drawRoundRect(barX, barY, barW, 14, 4)
+		local fill = rest and math.floor((barW - 4) * rest.progress / t.restMax) or 0
+		if fill > 0 then gfx.fillRoundRect(barX + 2, barY + 2, fill, 10, 3) end
+		if rest and rest.done then
+			drawPill("RESTED", TRAY_CX, y + 126)
+		end
+		local hint = playdate.isCrankDocked() and "Undock the crank" or "Crank to rest 🎣"
+		drawText(fonts.small, hint, TRAY_CX, y + 150, "center")
+		return
+	end
+
 	local roll = t.roll
 	local spec = roll and roll.spec or t.spec
 	if row.pool and not roll and not spec then
@@ -384,6 +407,10 @@ function UI.drawFooter(mode, toast)
 	if mode == "pool" then
 		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, UI.FOOTER_Y + 2)
 		drawText(fonts.small, "Ⓑ clear", UI.W - 6, UI.FOOTER_Y + 2, "right")
+		return
+	end
+	if mode == "rest" then
+		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 crank to rest", 6, UI.FOOTER_Y + 2)
 		return
 	end
 	if mode == "resource" then

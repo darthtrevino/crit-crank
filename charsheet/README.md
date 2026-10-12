@@ -25,8 +25,8 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 | Crank / Ⓐ / Ⓑ on a Status counter | Adjust it (crank clockwise = up; Ⓐ −1, Ⓑ +1) |
 | On the Dice page | Use "Build a pool": crank, Ⓐ or Ⓑ on a die row (d4–d20) or the Modifier changes its count; select "Roll pool" to roll it all (e.g. 2d6+1d4+2), Ⓑ there clears the pool |
 | Menu → Hero | Switch character, prebuilt or imported (remembered between launches) |
-| Menu → Short Rest | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
-| Menu → Long Rest | Full HP, all spell slots and features, regain half your Hit Dice (min 1) |
+| Status → Short Rest (crank to confirm) | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
+| Status → Long Rest (crank to confirm) | Full HP, all spell slots and features, regain half your Hit Dice (min 1) |
 | Menu (pause) | The left side of the pause screen explains the selected row: what the ability, save, skill, spell, feature or resource does, and how its bonus adds up (e.g. "+5 = STR +3, prof +2") |
 
 ## Rules handled

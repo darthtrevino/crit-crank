@@ -24,6 +24,10 @@ local CRANK_ADJUST = 20  -- rotation per ±1 on a resource row
 local TOAST_FRAMES = 75
 local POOL_MAX_DICE = 12
 local POOL_BONUS = 20    -- modifier range is ±POOL_BONUS
+local REST_CRANK = 720   -- rotation needed to confirm a rest
+local REST_STEP = 90     -- rotation per progress tick sound
+local REST_DECAY = 30    -- progress lost per frame once the crank stops
+local REST_RELOCK = 15   -- still frames needed before another rest can start
 
 math.randomseed(pd.getSecondsSinceEpoch())
 pd.display.setRefreshRate(30)
@@ -45,6 +49,7 @@ local state = {
 	toastFrames = 0,
 	dirty = false,
 	pool = {},      -- custom dice pool: d4..d20 counts and bonus
+	rest = nil,     -- crank progress on a rest row: { row, progress, idle, locked, done }
 }
 
 local crank = { windup = 0, tick = 0, idle = 0, adjust = 0 }
@@ -155,7 +160,7 @@ local function currentPage()
 end
 
 local function isSelectable(row)
-	return row and (row.kind == "roll" or row.kind == "resource" or row.kind == "counter")
+	return row and (row.kind == "roll" or row.kind == "resource" or row.kind == "counter" or row.kind == "rest")
 end
 
 local function firstSelectable(rows)
@@ -317,6 +322,7 @@ local function loadCharacter(i)
 		state.scroll[p] = 0
 	end
 	state.roll = nil
+	state.rest = nil
 	state.critPending = false
 	state.mode = "normal"
 end
@@ -335,6 +341,7 @@ local function moveSel(dir)
 	if i >= 1 and i <= #rows then
 		state.sel[state.page] = i
 		state.roll = nil
+		state.rest = nil
 		ensureVisible()
 	end
 end
@@ -343,7 +350,41 @@ local function changePage(dir)
 	if diceMoving() then return end
 	state.page = ((state.page - 1 + dir) % #state.pages) + 1
 	state.roll = nil
+	state.rest = nil
 	ensureVisible()
+end
+
+---------------------------------------------------------------- rests
+
+local takeRest -- defined with the persistence code below
+
+-- Cranking on a rest row fills a bar; a full bar takes the rest. Stopping
+-- drains it, and after a rest the crank must rest a moment before another.
+local function updateRest(row, amount)
+	local r = state.rest
+	if not r or r.row ~= row then
+		r = { row = row, progress = 0, idle = 0 }
+		state.rest = r
+	end
+	if amount <= 0.5 then
+		r.idle += 1
+		if r.locked and r.idle >= REST_RELOCK then r.locked = false end
+		if r.idle > SETTLE_FRAMES then r.progress = math.max(0, r.progress - REST_DECAY) end
+		return
+	end
+	r.idle = 0
+	if r.locked then return end
+	r.done = false
+	local before = r.progress
+	r.progress = math.min(REST_CRANK, r.progress + amount)
+	if math.floor(before / REST_STEP) ~= math.floor(r.progress / REST_STEP) then
+		tickSynth:playNote(400 + 600 * r.progress / REST_CRANK, 0.12, 0.03)
+	end
+	if r.progress >= REST_CRANK then
+		r.progress, r.locked, r.done = 0, true, true
+		takeRest(row.key)
+		landSynth:playNote(784, 0.4, 0.3)
+	end
 end
 
 ---------------------------------------------------------------- rolling
@@ -520,6 +561,10 @@ local function updateRoll()
 	end
 
 	local sel = selectedRow()
+	if sel and sel.kind == "rest" then
+		updateRest(sel, amount)
+		return
+	end
 	if sel and (sel.kind == "resource" or sel.kind == "counter") then
 		crank.adjust += change
 		while math.abs(crank.adjust) >= CRANK_ADJUST do
@@ -567,13 +612,21 @@ function pd.downButtonUp() release("down") end
 function pd.leftButtonDown() changePage(-1) end
 function pd.rightButtonDown() changePage(1) end
 
+local function restHint()
+	local row = selectedRow()
+	if row and row.kind == "rest" then
+		toast("Crank to take a " .. row.label:lower())
+		return true
+	end
+end
+
 local function resourceRow()
 	local row = selectedRow()
 	if row and (row.kind == "resource" or row.kind == "counter") then return row end
 end
 
 function pd.AButtonDown()
-	if diceMoving() then return end
+	if diceMoving() or restHint() then return end
 	local r = resourceRow()
 	if r then
 		holdRepeat("a", function() adjustRow(r, -1) end)
@@ -584,7 +637,7 @@ end
 function pd.AButtonUp() release("a") end
 
 function pd.BButtonDown()
-	if diceMoving() then return end
+	if diceMoving() or restHint() then return end
 	local r = resourceRow()
 	if r then
 		holdRepeat("b", function() adjustRow(r, 1) end)
@@ -650,7 +703,6 @@ local savedKey = saved and (saved.charKey or (saved.charIndex and tostring(saved
 loadCharacter(indexOfKey(savedKey) or 1)
 
 local menu = pd.getSystemMenu()
-local shortRest, longRest
 
 -- Short names for the Hero menu, made unique.
 local function heroNames()
@@ -677,27 +729,29 @@ local function buildMenu()
 			end
 		end
 	end)
-	menu:addMenuItem("Short Rest", shortRest)
-	menu:addMenuItem("Long Rest", longRest)
 end
 
-function shortRest()
+local function shortRest()
 	local restored = Resources.shortRest(character(), state.res)
 	state.lastCast = nil
 	if #restored > 0 then
 		toast("Short rest: " .. table.concat(restored, ", ") .. " restored")
 	else
-		toast("Short rest: spend Hit Dice on STATUS to heal")
+		toast("Short rest: spend Hit Dice to heal")
 	end
 	save()
 end
 
-function longRest()
+local function longRest()
 	local regained = Resources.longRest(character(), state.res)
 	state.lastCast = nil
 	state.critPending = false
 	toast("Long rest: fully restored, +" .. regained .. " Hit Dice")
 	save()
+end
+
+function takeRest(kind)
+	if kind == "long" then longRest() else shortRest() end
 end
 
 buildMenu()
@@ -768,6 +822,7 @@ function pd.update()
 	local tray = {
 		row = row, mode = state.mode, critPending = state.critPending, roll = state.roll,
 		getResource = getResource, getCounter = getCounter,
+		rest = state.rest and state.rest.row == row and state.rest or nil, restMax = REST_CRANK,
 	}
 	if row and row.kind == "roll" and not (row.pool and #row.spec.terms == 0) then
 		tray.spec = effectiveSpec(row)
@@ -784,6 +839,8 @@ function pd.update()
 	local footerMode = state.mode
 	if row and (row.kind == "resource" or row.kind == "counter") then
 		footerMode = "resource"
+	elseif row and row.kind == "rest" then
+		footerMode = "rest"
 	elseif row and row.pool then
 		footerMode = "pool"
 	end
