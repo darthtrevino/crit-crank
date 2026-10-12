@@ -68,6 +68,33 @@ local function playLand(result)
 	end
 end
 
+-- Hype air horn for natural 20s: BWA-BWA-BWAAAAA on a stack of detuned saws.
+local HORN_FREQS = { 233.1, 234.4, 293.7, 295.2, 349.2, 466.2 }
+local hornVoices = {}
+for i, _ in ipairs(HORN_FREQS) do
+	local v = pd.sound.synth.new(pd.sound.kWaveSawtooth)
+	v:setADSR(0.015, 0.05, 0.85, 0.12)
+	hornVoices[i] = v
+end
+local hornFilter = pd.sound.twopolefilter.new(pd.sound.kFilterLowPass)
+hornFilter:setFrequency(2600)
+hornFilter:setResonance(0.3)
+local hornChannel = pd.sound.channel.new()
+hornChannel:addEffect(hornFilter)
+for _, v in ipairs(hornVoices) do hornChannel:addSource(v) end
+
+local function hornBlast(len)
+	for i, v in ipairs(hornVoices) do
+		v:playNote(HORN_FREQS[i], 0.13, len)
+	end
+end
+
+local function playHorn()
+	hornBlast(0.13)
+	pd.timer.performAfterDelay(190, function() hornBlast(0.13) end)
+	pd.timer.performAfterDelay(380, function() hornBlast(0.9) end)
+end
+
 ---------------------------------------------------------------- selection
 
 local function currentPage()
@@ -383,6 +410,10 @@ local function finishLanding()
 		toast("Healed " .. (after - before) .. " HP (" .. after .. "/" .. c.hp .. ")")
 	end
 	playLand(roll.result)
+	-- dice pools (Dice page) stay quiet
+	if roll.result.natural == 20 and roll.row.rollKind ~= "pool" then
+		playHorn()
+	end
 end
 
 local function updateRoll()
