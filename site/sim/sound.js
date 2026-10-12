@@ -79,7 +79,7 @@ export function landFor(result) {
 
 // DJ air horn for natural 20s, as in main.lua. HORN must match main.lua's;
 // the sound-design skill's tuner passes its own settings to horn().
-export const HORN = Object.freeze({ hitHz: 587.3, hitMs: 155, hz: 740, sagAt: 150, sag: -4.05, sagMs: 90, holdMs: 310 });
+export const HORN = Object.freeze({ hitHz: 587.3, hitMs: 155, hz: 740, sagAt: 150, sag: -4.05, sagMs: 20, holdMs: 310 });
 const HORN_VOICES = [[0.5, "sawtooth", 0.2], [737 / 740, "sawtooth", 0.15], [743.5 / 740, "sawtooth", 0.15], [1, "square", 0.12], [2, "sawtooth", 0.06]];
 export function horn(h = HORN) {
 	const ctx = audio();

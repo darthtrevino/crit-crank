@@ -89,7 +89,7 @@ local HORN = {
 	hz = 740,      -- pitch of the long blast
 	sagAt = 150,   -- ms the long blast holds before dropping
 	sag = -4.05,   -- half-steps it drops
-	sagMs = 90,    -- ms the drop takes
+	sagMs = 20,    -- ms the drop takes
 	holdMs = 310,  -- ms it holds the low note before fading
 }
 local HORN_VOICES = { -- pitch ratio, wave, volume
