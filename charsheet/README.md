@@ -28,6 +28,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 | Status → Short Rest (crank to confirm) | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
 | Status → Long Rest (crank to confirm) | Full HP, all spell slots and features, regain half your Hit Dice (min 1) |
 | Menu (pause) | The left side of the pause screen explains the selected row: what the ability, save, skill, spell, feature or resource does, and how its bonus adds up (e.g. "+5 = STR +3, prof +2") |
+| Menu → Rules | Opens the selected row's full rule text in a scrolling viewer: crank or ⬆️⬇️ to scroll, Ⓐ to page, Ⓑ to close |
 
 ## Rules handled
 

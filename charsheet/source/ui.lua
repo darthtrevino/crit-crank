@@ -448,10 +448,81 @@ function UI.drawRuleCard(title, sub, body)
 	local font = fonts.body
 	local _, need = gfx.getTextSizeForMaxWidth(body, W, nil, font)
 	if need > h then font = fonts.small end
+	_, need = gfx.getTextSizeForMaxWidth(body, W, nil, font)
+	if need > h then
+		-- Too long for the card: point at the scrolling viewer.
+		h -= 18
+		gfx.fillRect(0, 222, 199, 18)
+		gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+		drawText(fonts.small, fit(fonts.small, "More: Rules in menu", W), X, 224)
+		gfx.setImageDrawMode(gfx.kDrawModeCopy)
+	end
 	gfx.setFont(font)
 	gfx.drawTextInRect(body, X, y, W, h, nil, "…")
 	gfx.setColor(gfx.kColorBlack)
 	gfx.drawLine(199, 0, 199, 240)
 	gfx.popContext()
 	return img
+end
+
+---------------------------------------------------------------- rules viewer
+
+UI.RULES_BODY_Y = 52
+UI.RULES_BODY_H = UI.FOOTER_Y - UI.RULES_BODY_Y - 2
+local RULES_X, RULES_W = 12, UI.W - 32
+
+-- Pre-renders rule text once so scrolling only blits an image.
+function UI.renderRuleBody(body)
+	if body == "" then body = "No extra rules for this row." end
+	local _, h = gfx.getTextSizeForMaxWidth(body, RULES_W, nil, fonts.body)
+	h = math.max(h + 4, 1)
+	local img = gfx.image.new(RULES_W, h)
+	gfx.pushContext(img)
+	gfx.setFont(fonts.body)
+	gfx.drawTextInRect(body, 0, 0, RULES_W, h)
+	gfx.popContext()
+	return img, h
+end
+
+-- Full-screen rule text. v = { title, sub, img, height, scroll, bob };
+-- dy slides the panel down (0 = fully open).
+function UI.drawRuleViewer(v, dy)
+	dy = math.floor(dy)
+	gfx.setColor(gfx.kColorWhite)
+	gfx.fillRect(0, dy, UI.W, UI.H)
+	gfx.setColor(gfx.kColorBlack)
+	gfx.fillRect(0, dy, UI.W, 28)
+	gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+	drawText(fonts.title, fit(fonts.title, v.title, UI.W - 24), RULES_X, dy + 7)
+	gfx.setImageDrawMode(gfx.kDrawModeCopy)
+	drawText(fonts.small, fit(fonts.small, v.sub, RULES_W), RULES_X, dy + 31)
+	gfx.setDitherPattern(0.5)
+	gfx.drawLine(RULES_X, dy + 47, UI.W - RULES_X, dy + 47)
+	gfx.setColor(gfx.kColorBlack)
+
+	local top, h = dy + UI.RULES_BODY_Y, UI.RULES_BODY_H
+	gfx.setClipRect(0, top, UI.W, h)
+	v.img:draw(RULES_X, top - math.floor(v.scroll))
+	gfx.clearClipRect()
+
+	local maxScroll = math.max(v.height - h, 0)
+	if maxScroll > 0 then
+		local trackX = UI.W - 8
+		local thumbH = math.max(math.floor(h * h / v.height), 12)
+		local thumbY = top + math.floor((h - thumbH) * v.scroll / maxScroll)
+		gfx.setDitherPattern(0.75)
+		gfx.drawLine(trackX + 1, top, trackX + 1, top + h)
+		gfx.setColor(gfx.kColorBlack)
+		gfx.fillRoundRect(trackX, thumbY, 3, thumbH, 1)
+		if v.scroll < maxScroll - 1 then
+			-- bobbing "more below" arrow
+			local ax = UI.W - 100
+			local ay = dy + UI.FOOTER_Y + 6 + math.floor(math.sin(v.bob) * 2 + 0.5)
+			gfx.fillTriangle(ax - 5, ay, ax + 5, ay, ax, ay + 5)
+		end
+	end
+
+	gfx.drawLine(0, dy + UI.FOOTER_Y, UI.W, dy + UI.FOOTER_Y)
+	drawText(fonts.small, "🎣/⬆️⬇️ scroll  Ⓐ page", 6, dy + UI.FOOTER_Y + 2)
+	drawText(fonts.small, "Ⓑ close", UI.W - 6, dy + UI.FOOTER_Y + 2, "right")
 end
