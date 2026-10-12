@@ -9,7 +9,14 @@ use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
 
 const ABILITIES: [&str; 6] = ["str", "dex", "con", "int", "wis", "cha"];
-const ABILITY_NAMES: [&str; 6] = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"];
+const ABILITY_NAMES: [&str; 6] = [
+    "strength",
+    "dexterity",
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "charisma",
+];
 
 const SKILLS: [(&str, &str); 18] = [
     ("acrobatics", "acrobatics"),
@@ -58,8 +65,26 @@ const FULL_CASTER_SLOTS: [[i32; 9]; 20] = [
 
 /// Warlock pact magic: (slot count, slot level) by warlock level.
 const PACT_SLOTS: [(i32, usize); 20] = [
-    (1, 1), (2, 1), (2, 2), (2, 2), (2, 3), (2, 3), (2, 4), (2, 4), (2, 5), (2, 5),
-    (3, 5), (3, 5), (3, 5), (3, 5), (3, 5), (3, 5), (4, 5), (4, 5), (4, 5), (4, 5),
+    (1, 1),
+    (2, 1),
+    (2, 2),
+    (2, 2),
+    (2, 3),
+    (2, 3),
+    (2, 4),
+    (2, 4),
+    (2, 5),
+    (2, 5),
+    (3, 5),
+    (3, 5),
+    (3, 5),
+    (3, 5),
+    (3, 5),
+    (3, 5),
+    (4, 5),
+    (4, 5),
+    (4, 5),
+    (4, 5),
 ];
 
 /// Accepts a numeric id or any dndbeyond.com character URL.
@@ -69,18 +94,26 @@ pub fn parse_character_id(input: &str) -> Result<u64> {
         return Ok(id);
     }
     if let Some(pos) = s.find("/characters/") {
-        let digits: String = s[pos + 12..].chars().take_while(|c| c.is_ascii_digit()).collect();
+        let digits: String = s[pos + 12..]
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
         if let Ok(id) = digits.parse() {
             return Ok(id);
         }
     }
-    bail!("couldn't find a character id in {input:?} (expected e.g. 27935516 or https://www.dndbeyond.com/characters/27935516)")
+    bail!(
+        "couldn't find a character id in {input:?} (expected e.g. 27935516 or https://www.dndbeyond.com/characters/27935516)"
+    )
 }
 
 pub fn fetch(id: u64) -> Result<Value> {
     let url = format!("https://character-service.dndbeyond.com/character/v5/character/{id}");
     let mut resp = match ureq::get(&url)
-        .header("User-Agent", concat!("charsync/", env!("CARGO_PKG_VERSION")))
+        .header(
+            "User-Agent",
+            concat!("charsync/", env!("CARGO_PKG_VERSION")),
+        )
         .header("Accept", "application/json")
         .call()
     {
@@ -91,13 +124,20 @@ pub fn fetch(id: u64) -> Result<Value> {
         Err(ureq::Error::StatusCode(404)) => bail!("character {id} not found"),
         Err(e) => return Err(e).context("fetching from D&D Beyond"),
     };
-    let text = resp.body_mut().read_to_string().context("reading D&D Beyond response")?;
+    let text = resp
+        .body_mut()
+        .read_to_string()
+        .context("reading D&D Beyond response")?;
     serde_json::from_str(&text).context("D&D Beyond returned invalid JSON")
 }
 
 /// Returns the character object whether given the full response or just `data`.
 pub fn character_data(v: &Value) -> Result<&Value> {
-    let d = if v.get("data").is_some_and(Value::is_object) { &v["data"] } else { v };
+    let d = if v.get("data").is_some_and(Value::is_object) {
+        &v["data"]
+    } else {
+        v
+    };
     if d.get("stats").is_none() || d.get("classes").is_none() {
         if let Some(msg) = v.get("message").and_then(Value::as_str) {
             bail!("D&D Beyond: {msg}");
@@ -114,7 +154,9 @@ fn arr(v: &Value) -> &[Value] {
 }
 
 fn int(v: &Value) -> Option<i32> {
-    v.as_i64().map(|n| n as i32).or_else(|| v.as_f64().map(|f| f as i32))
+    v.as_i64()
+        .map(|n| n as i32)
+        .or_else(|| v.as_f64().map(|f| f as i32))
 }
 
 fn text(v: &Value) -> Option<&str> {
@@ -140,10 +182,21 @@ pub fn ascii(s: &str) -> String {
             c => {
                 // strip accents for the common Latin-1 range, drop anything else
                 let base = match c {
-                    'à'..='å' => 'a', 'À'..='Å' => 'A', 'è'..='ë' => 'e', 'È'..='Ë' => 'E',
-                    'ì'..='ï' => 'i', 'Ì'..='Ï' => 'I', 'ò'..='ö' => 'o', 'Ò'..='Ö' => 'O',
-                    'ù'..='ü' => 'u', 'Ù'..='Ü' => 'U', 'ñ' => 'n', 'Ñ' => 'N', 'ç' => 'c',
-                    'Ç' => 'C', 'ý' | 'ÿ' => 'y',
+                    'à'..='å' => 'a',
+                    'À'..='Å' => 'A',
+                    'è'..='ë' => 'e',
+                    'È'..='Ë' => 'E',
+                    'ì'..='ï' => 'i',
+                    'Ì'..='Ï' => 'I',
+                    'ò'..='ö' => 'o',
+                    'Ò'..='Ö' => 'O',
+                    'ù'..='ü' => 'u',
+                    'Ù'..='Ü' => 'U',
+                    'ñ' => 'n',
+                    'Ñ' => 'N',
+                    'ç' => 'c',
+                    'Ç' => 'C',
+                    'ý' | 'ÿ' => 'y',
                     _ => continue,
                 };
                 out.push(base);
@@ -163,20 +216,40 @@ fn rule_text(v: &Value) -> Option<String> {
     while let Some(c) = chars.next() {
         match c {
             '<' => in_tag = true,
-            '>' if in_tag => { in_tag = false; plain.push(' ') }
+            '>' if in_tag => {
+                in_tag = false;
+                plain.push(' ')
+            }
             _ if in_tag => {}
             // DDB templates like {{scalevalue}} can't be evaluated here
-            '{' if chars.peek() == Some(&'{') => { chars.next(); braces += 1; if braces == 1 { plain.push('X') } }
-            '}' if braces > 0 && chars.peek() == Some(&'}') => { chars.next(); braces -= 1 }
+            '{' if chars.peek() == Some(&'{') => {
+                chars.next();
+                braces += 1;
+                if braces == 1 {
+                    plain.push('X')
+                }
+            }
+            '}' if braces > 0 && chars.peek() == Some(&'}') => {
+                chars.next();
+                braces -= 1
+            }
             _ if braces > 0 => {}
             _ => plain.push(c),
         }
     }
     let plain = plain
-        .replace("&nbsp;", " ").replace("&rsquo;", "'").replace("&lsquo;", "'")
-        .replace("&ldquo;", "\"").replace("&rdquo;", "\"").replace("&mdash;", "-")
-        .replace("&ndash;", "-").replace("&quot;", "\"").replace("&#39;", "'")
-        .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&");
+        .replace("&nbsp;", " ")
+        .replace("&rsquo;", "'")
+        .replace("&lsquo;", "'")
+        .replace("&ldquo;", "\"")
+        .replace("&rdquo;", "\"")
+        .replace("&mdash;", "-")
+        .replace("&ndash;", "-")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&");
     let words: Vec<&str> = plain.split_whitespace().collect();
     let mut out = ascii(&words.join(" "));
     if out.len() > MAX {
@@ -189,7 +262,11 @@ fn rule_text(v: &Value) -> Option<String> {
 
 fn camel_id(name: &str) -> String {
     let mut out = String::new();
-    for (i, word) in name.split(|c: char| !c.is_ascii_alphanumeric()).filter(|w| !w.is_empty()).enumerate() {
+    for (i, word) in name
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .enumerate()
+    {
         let lower = word.to_ascii_lowercase();
         if i == 0 {
             out.push_str(&lower);
@@ -201,7 +278,11 @@ fn camel_id(name: &str) -> String {
             }
         }
     }
-    if out.is_empty() { "feature".into() } else { out }
+    if out.is_empty() {
+        "feature".into()
+    } else {
+        out
+    }
 }
 
 fn slug(s: &str) -> String {
@@ -245,7 +326,8 @@ impl<'a> Ctx<'a> {
             .iter()
             .filter(|i| i["equipped"].as_bool() == Some(true))
             .filter(|i| {
-                i["definition"]["canAttune"].as_bool() != Some(true) || i["isAttuned"].as_bool() == Some(true)
+                i["definition"]["canAttune"].as_bool() != Some(true)
+                    || i["isAttuned"].as_bool() == Some(true)
             })
             .filter_map(|i| i["definition"]["id"].as_i64())
             .collect();
@@ -268,14 +350,28 @@ impl<'a> Ctx<'a> {
             }
         }
 
-        let level = arr(&d["classes"]).iter().filter_map(|c| int(&c["level"])).sum::<i32>().max(1);
-        let mut ctx = Ctx { d, mods, abilities: Abilities::default(), level, pb: proficiency(level) };
+        let level = arr(&d["classes"])
+            .iter()
+            .filter_map(|c| int(&c["level"]))
+            .sum::<i32>()
+            .max(1);
+        let mut ctx = Ctx {
+            d,
+            mods,
+            abilities: Abilities::default(),
+            level,
+            pb: proficiency(level),
+        };
         ctx.abilities = ctx.compute_abilities();
         ctx
     }
 
     fn sum(&self, kind: &str, sub: &str) -> i32 {
-        self.mods.iter().filter(|m| m.kind == kind && m.sub == sub).filter_map(|m| m.value).sum()
+        self.mods
+            .iter()
+            .filter(|m| m.kind == kind && m.sub == sub)
+            .filter_map(|m| m.value)
+            .sum()
     }
 
     fn has(&self, kind: &str, sub: &str) -> bool {
@@ -283,7 +379,10 @@ impl<'a> Ctx<'a> {
     }
 
     fn stat_entry(&self, field: &str, id: i32) -> Option<i32> {
-        arr(&self.d[field]).iter().find(|s| int(&s["id"]) == Some(id)).and_then(|s| int(&s["value"]))
+        arr(&self.d[field])
+            .iter()
+            .find(|s| int(&s["id"]) == Some(id))
+            .and_then(|s| int(&s["value"]))
     }
 
     fn compute_abilities(&self) -> Abilities {
@@ -317,10 +416,10 @@ impl<'a> Ctx<'a> {
             let lvl = int(&c["level"]).unwrap_or(0);
             for f in arr(&c["classFeatures"]) {
                 let def = &f["definition"];
-                if int(&def["requiredLevel"]).unwrap_or(1) <= lvl {
-                    if let Some(n) = text(&def["name"]) {
-                        names.push(n.to_string());
-                    }
+                if int(&def["requiredLevel"]).unwrap_or(1) <= lvl
+                    && let Some(n) = text(&def["name"])
+                {
+                    names.push(n.to_string());
                 }
             }
         }
@@ -357,14 +456,20 @@ impl<'a> Ctx<'a> {
             .filter_map(|m| m.value)
             .max()
             .unwrap_or(0);
-        race.max(set) + self.sum("bonus", "speed") + self.sum("bonus", "speed-walking") + self.sum("bonus", "unarmored-movement")
+        race.max(set)
+            + self.sum("bonus", "speed")
+            + self.sum("bonus", "speed-walking")
+            + self.sum("bonus", "unarmored-movement")
     }
 
     fn ac(&self) -> i32 {
         let dex = self.abilities.modifier("dex");
         let mut body: Option<i32> = None;
         let mut shield = 0;
-        for i in arr(&self.d["inventory"]).iter().filter(|i| i["equipped"].as_bool() == Some(true)) {
+        for i in arr(&self.d["inventory"])
+            .iter()
+            .filter(|i| i["equipped"].as_bool() == Some(true))
+        {
             let def = &i["definition"];
             let base = int(&def["armorClass"]).unwrap_or(0);
             match int(&def["armorTypeId"]) {
@@ -378,8 +483,16 @@ impl<'a> Ctx<'a> {
         let body = body.unwrap_or_else(|| {
             // Unarmored Defense (barbarian CON, monk WIS) or a fixed base (Draconic Resilience)
             let mut best = 10 + dex;
-            for m in self.mods.iter().filter(|m| m.kind == "set" && m.sub == "unarmored-armor-class") {
-                let stat = m.stat.and_then(ability_by_id).map(|a| self.abilities.modifier(a)).unwrap_or(0);
+            for m in self
+                .mods
+                .iter()
+                .filter(|m| m.kind == "set" && m.sub == "unarmored-armor-class")
+            {
+                let stat = m
+                    .stat
+                    .and_then(ability_by_id)
+                    .map(|a| self.abilities.modifier(a))
+                    .unwrap_or(0);
                 best = best.max(10 + dex + stat + m.value.unwrap_or(0));
             }
             best
@@ -414,12 +527,18 @@ impl<'a> Ctx<'a> {
             .iter()
             .filter_map(|c| text(&c["definition"]["name"]).map(ascii))
             .collect();
-        if names.is_empty() { "Adventurer".into() } else { names.join("/") }
+        if names.is_empty() {
+            "Adventurer".into()
+        } else {
+            names.join("/")
+        }
     }
 
     fn primary_class(&self) -> Option<&'a Value> {
         let cs = self.classes();
-        cs.iter().find(|c| c["isStartingClass"].as_bool() == Some(true)).or(cs.first())
+        cs.iter()
+            .find(|c| c["isStartingClass"].as_bool() == Some(true))
+            .or(cs.first())
     }
 
     fn class_ability(&self, class: &Value) -> Option<&'static str> {
@@ -446,9 +565,16 @@ impl<'a> Ctx<'a> {
             for def in [&c["definition"], &c["subclassDefinition"]] {
                 let rules = &def["spellRules"];
                 let table = arr(&rules["levelSpellSlots"]);
-                let row: Vec<i32> = table.get(lvl as usize).map(|r| arr(r).iter().filter_map(int).collect()).unwrap_or_default();
-                if row.iter().any(|&n| n > 0) || (def["canCastSpells"].as_bool() == Some(true) && !table.is_empty()) {
-                    let divisor = int(&rules["multiClassSpellSlotDivisor"]).unwrap_or(1).max(1);
+                let row: Vec<i32> = table
+                    .get(lvl as usize)
+                    .map(|r| arr(r).iter().filter_map(int).collect())
+                    .unwrap_or_default();
+                if row.iter().any(|&n| n > 0)
+                    || (def["canCastSpells"].as_bool() == Some(true) && !table.is_empty())
+                {
+                    let divisor = int(&rules["multiClassSpellSlotDivisor"])
+                        .unwrap_or(1)
+                        .max(1);
                     let rounds_up = rules["multiClassSpellSlotRounding"].as_i64() == Some(2);
                     casters.push((lvl, divisor, rounds_up, row));
                     break;
@@ -464,7 +590,10 @@ impl<'a> Ctx<'a> {
                     .iter()
                     .map(|(l, div, up, _)| if *up { (l + div - 1) / div } else { l / div })
                     .sum();
-                FULL_CASTER_SLOTS.get((caster_level - 1).max(-1) as usize).map(|r| r.to_vec()).unwrap_or_default()
+                FULL_CASTER_SLOTS
+                    .get((caster_level - 1).max(-1) as usize)
+                    .map(|r| r.to_vec())
+                    .unwrap_or_default()
             }
         };
         if let Some((count, level)) = pact {
@@ -483,14 +612,21 @@ impl<'a> Ctx<'a> {
 
     fn weapons(&self, rows: &mut Vec<Action>) {
         let mut seen = HashSet::new();
-        let melee_bonus = self.sum("bonus", "melee-weapon-attacks") + self.sum("bonus", "weapon-attacks");
-        let ranged_bonus = self.sum("bonus", "ranged-weapon-attacks") + self.sum("bonus", "weapon-attacks");
-        for i in arr(&self.d["inventory"]).iter().filter(|i| i["equipped"].as_bool() == Some(true)) {
+        let melee_bonus =
+            self.sum("bonus", "melee-weapon-attacks") + self.sum("bonus", "weapon-attacks");
+        let ranged_bonus =
+            self.sum("bonus", "ranged-weapon-attacks") + self.sum("bonus", "weapon-attacks");
+        for i in arr(&self.d["inventory"])
+            .iter()
+            .filter(|i| i["equipped"].as_bool() == Some(true))
+        {
             let def = &i["definition"];
             if def["filterType"].as_str() != Some("Weapon") {
                 continue;
             }
-            let Some(dice) = text(&def["damage"]["diceString"]) else { continue };
+            let Some(dice) = text(&def["damage"]["diceString"]) else {
+                continue;
+            };
             let name = ascii(text(&def["name"]).unwrap_or("Weapon"));
             if !seen.insert(name.clone()) {
                 continue;
@@ -502,8 +638,17 @@ impl<'a> Ctx<'a> {
             let has = |p: &str| props.iter().any(|x| x == p);
             let ranged = int(&def["attackType"]) == Some(2);
 
-            let (str_m, dex_m) = (self.abilities.modifier("str"), self.abilities.modifier("dex"));
-            let ab_mod = if has("finesse") { str_m.max(dex_m) } else if ranged { dex_m } else { str_m };
+            let (str_m, dex_m) = (
+                self.abilities.modifier("str"),
+                self.abilities.modifier("dex"),
+            );
+            let ab_mod = if has("finesse") {
+                str_m.max(dex_m)
+            } else if ranged {
+                dex_m
+            } else {
+                str_m
+            };
 
             let base_type = text(&def["type"]).map(slug).unwrap_or_default();
             let category = match int(&def["categoryId"]) {
@@ -517,11 +662,16 @@ impl<'a> Ctx<'a> {
 
             let magic: i32 = arr(&def["grantedModifiers"])
                 .iter()
-                .filter(|m| m["type"].as_str() == Some("bonus") && m["subType"].as_str() == Some("magic"))
+                .filter(|m| {
+                    m["type"].as_str() == Some("bonus") && m["subType"].as_str() == Some("magic")
+                })
                 .filter_map(|m| int(&m["value"]).or_else(|| int(&m["fixedValue"])))
                 .sum();
 
-            let hit = ab_mod + if proficient { self.pb } else { 0 } + magic + if ranged { ranged_bonus } else { melee_bonus };
+            let hit = ab_mod
+                + if proficient { self.pb } else { 0 }
+                + magic
+                + if ranged { ranged_bonus } else { melee_bonus };
             let note = if ranged || has("thrown") {
                 match (int(&def["range"]), int(&def["longRange"])) {
                     (Some(r), Some(l)) if l > r => Some(format!("{r}/{l}")),
@@ -529,11 +679,21 @@ impl<'a> Ctx<'a> {
                     _ => None,
                 }
             } else {
-                ["finesse", "reach", "versatile", "heavy"].iter().find(|p| has(p)).map(|p| p.to_string())
+                ["finesse", "reach", "versatile", "heavy"]
+                    .iter()
+                    .find(|p| has(p))
+                    .map(|p| p.to_string())
             };
             rows.push(Action {
                 name: Some(name),
-                atk: Some(if ranged || (has("finesse") && dex_m > str_m) { "dex" } else { "str" }.into()),
+                atk: Some(
+                    if ranged || (has("finesse") && dex_m > str_m) {
+                        "dex"
+                    } else {
+                        "str"
+                    }
+                    .into(),
+                ),
                 hit: Some(hit),
                 dmg: Some(dice_plus(dice, ab_mod + magic)),
                 kind: text(&def["damageType"]).map(|t| t.to_ascii_lowercase()),
@@ -546,10 +706,14 @@ impl<'a> Ctx<'a> {
     /// Limited-use actions from race/class/feats/items -> features (+ rollable rows).
     fn limited_actions(&self, features: &mut Vec<Feature>, rows: &mut Vec<Action>) {
         let mut ids = HashSet::new();
-        let Some(groups) = self.d["actions"].as_object() else { return };
+        let Some(groups) = self.d["actions"].as_object() else {
+            return;
+        };
         for list in groups.values() {
             for a in arr(list) {
-                let Some(name) = text(&a["name"]).map(ascii) else { continue };
+                let Some(name) = text(&a["name"]).map(ascii) else {
+                    continue;
+                };
                 let lu = &a["limitedUse"];
                 let mut uses = None;
                 if lu.is_object() {
@@ -563,23 +727,45 @@ impl<'a> Ctx<'a> {
                     if max > 0 {
                         let id = camel_id(&name);
                         if ids.insert(id.clone()) {
-                            let reset = if int(&lu["resetType"]) == Some(1) { "short" } else { "long" };
-                            features.push(Feature { id: id.clone(), name: name.clone(), max, reset: reset.into(), rule: rule_text(a) });
+                            let reset = if int(&lu["resetType"]) == Some(1) {
+                                "short"
+                            } else {
+                                "long"
+                            };
+                            features.push(Feature {
+                                id: id.clone(),
+                                name: name.clone(),
+                                max,
+                                reset: reset.into(),
+                                rule: rule_text(a),
+                            });
                         }
                         uses = Some(id);
                     }
                 }
 
-                let Some(dice) = text(&a["dice"]["diceString"]) else { continue };
-                let stat_bonus = int(&a["abilityModifierStatId"]).and_then(ability_by_id).map(|ab| self.abilities.modifier(ab)).unwrap_or(0);
+                let Some(dice) = text(&a["dice"]["diceString"]) else {
+                    continue;
+                };
+                let stat_bonus = int(&a["abilityModifierStatId"])
+                    .and_then(ability_by_id)
+                    .map(|ab| self.abilities.modifier(ab))
+                    .unwrap_or(0);
                 let expr = dice_plus(dice, stat_bonus + int(&a["value"]).unwrap_or(0));
                 let snippet = a["snippet"].as_str().unwrap_or("").to_ascii_lowercase();
                 let healing = snippet.contains("regain") && snippet.contains("hit point");
                 let note = uses.as_ref().map(|_| {
                     let f = features.iter().find(|f| Some(&f.id) == uses.as_ref());
-                    f.map(|f| format!("{}/{}", f.max, if f.reset == "short" { "SR" } else { "LR" })).unwrap_or_default()
+                    f.map(|f| format!("{}/{}", f.max, if f.reset == "short" { "SR" } else { "LR" }))
+                        .unwrap_or_default()
                 });
-                let mut row = Action { name: Some(name), note, uses, rule: rule_text(a), ..Default::default() };
+                let mut row = Action {
+                    name: Some(name),
+                    note,
+                    uses,
+                    rule: rule_text(a),
+                    ..Default::default()
+                };
                 if healing {
                     row.heal = Some(expr);
                     row.self_heal = Some(true);
@@ -587,7 +773,9 @@ impl<'a> Ctx<'a> {
                     row.save = Some(save.into());
                     row.dmg = Some(expr);
                     row.dc = int(&a["fixedSaveDc"]).or_else(|| {
-                        let ab = int(&a["abilityModifierStatId"]).and_then(ability_by_id).unwrap_or("con");
+                        let ab = int(&a["abilityModifierStatId"])
+                            .and_then(ability_by_id)
+                            .unwrap_or("con");
                         Some(8 + self.pb + self.abilities.modifier(ab))
                     });
                 } else {
@@ -604,7 +792,10 @@ impl<'a> Ctx<'a> {
     fn spell_sources(&self) -> Vec<(Vec<&'a Value>, Option<&'static str>)> {
         let mut out = Vec::new();
         for cs in arr(&self.d["classSpells"]) {
-            let class = self.classes().iter().find(|c| c["id"] == cs["characterClassId"]);
+            let class = self
+                .classes()
+                .iter()
+                .find(|c| c["id"] == cs["characterClassId"]);
             let ability = class.and_then(|c| self.class_ability(c));
             let spells: Vec<&Value> = arr(&cs["spells"]).iter().collect();
             // prepared casters list their whole spellbook; keep only what's ready
@@ -628,14 +819,21 @@ impl<'a> Ctx<'a> {
         out
     }
 
-    fn spells(&self, features: &mut Vec<Feature>, cantrips: &mut Vec<Action>, leveled: &mut Vec<Action>) {
+    fn spells(
+        &self,
+        features: &mut Vec<Feature>,
+        cantrips: &mut Vec<Action>,
+        leveled: &mut Vec<Action>,
+    ) {
         let spell_atk_bonus = self.sum("bonus", "spell-attacks");
         let spell_dc_bonus = self.sum("bonus", "spell-save-dc");
         let mut seen = HashSet::new();
         for (spells, class_ability) in self.spell_sources() {
             for s in spells {
                 let def = &s["definition"];
-                let Some(name) = text(&def["name"]).map(ascii) else { continue };
+                let Some(name) = text(&def["name"]).map(ascii) else {
+                    continue;
+                };
                 if !seen.insert(name.clone()) {
                     continue;
                 }
@@ -652,12 +850,17 @@ impl<'a> Ctx<'a> {
                 let mut heal = None;
                 for m in arr(&def["modifiers"]) {
                     let die = self.scaled_die(m, level);
-                    let primary = if m["usePrimaryStat"].as_bool() == Some(true) { ab_mod } else { 0 };
+                    let primary = if m["usePrimaryStat"].as_bool() == Some(true) {
+                        ab_mod
+                    } else {
+                        0
+                    };
                     match m["type"].as_str() {
                         Some("damage") => {
                             if let Some(d) = die {
                                 damage.push(dice_plus(&d, primary));
-                                dmg_type = dmg_type.or_else(|| text(&m["subType"]).map(str::to_string));
+                                dmg_type =
+                                    dmg_type.or_else(|| text(&m["subType"]).map(str::to_string));
                             }
                         }
                         Some("bonus") if m["subType"].as_str() == Some("hit-points") => {
@@ -686,29 +889,62 @@ impl<'a> Ctx<'a> {
                 let mut uses = None;
                 if level > 0 && lu.is_object() && int(&lu["maxUses"]).unwrap_or(0) > 0 {
                     let id = camel_id(&name);
-                    let reset = if int(&lu["resetType"]) == Some(1) { "short" } else { "long" };
-                    features.push(Feature { id: id.clone(), name: name.clone(), max: int(&lu["maxUses"]).unwrap_or(1), reset: reset.into(), rule: None });
+                    let reset = if int(&lu["resetType"]) == Some(1) {
+                        "short"
+                    } else {
+                        "long"
+                    };
+                    features.push(Feature {
+                        id: id.clone(),
+                        name: name.clone(),
+                        max: int(&lu["maxUses"]).unwrap_or(1),
+                        reset: reset.into(),
+                        rule: None,
+                    });
                     uses = Some(id);
                 }
-                let slot = if level > 0 && uses.is_none() { Some(level) } else { None };
+                let slot = if level > 0 && uses.is_none() {
+                    Some(level)
+                } else {
+                    None
+                };
 
-                let mut row = Action { name: Some(name), note, slot, uses, rule: rule_text(def), ..Default::default() };
+                let mut row = Action {
+                    name: Some(name),
+                    note,
+                    slot,
+                    uses,
+                    rule: rule_text(def),
+                    ..Default::default()
+                };
                 if let Some(h) = heal.filter(|_| damage.is_empty()) {
                     row.heal = Some(h);
                 } else {
                     row.dmg = Some(damage.join("+"));
                     row.kind = dmg_type.map(|t| t.to_ascii_lowercase());
-                    if def["requiresAttackRoll"].as_bool() == Some(true) || int(&def["attackType"]).is_some() {
+                    if def["requiresAttackRoll"].as_bool() == Some(true)
+                        || int(&def["attackType"]).is_some()
+                    {
                         row.atk = Some("spell".into());
                         row.hit = Some(ab_mod + self.pb + spell_atk_bonus);
-                    } else if let Some(save) = int(&def["saveDcAbilityId"]).and_then(ability_by_id).filter(|_| def["requiresSavingThrow"].as_bool() != Some(false)) {
+                    } else if let Some(save) = int(&def["saveDcAbilityId"])
+                        .and_then(ability_by_id)
+                        .filter(|_| def["requiresSavingThrow"].as_bool() != Some(false))
+                    {
                         row.save = Some(save.into());
-                        row.dc = Some(int(&s["overrideSaveDc"]).unwrap_or(8 + self.pb + ab_mod + spell_dc_bonus));
+                        row.dc = Some(
+                            int(&s["overrideSaveDc"])
+                                .unwrap_or(8 + self.pb + ab_mod + spell_dc_bonus),
+                        );
                     } else {
                         row.auto = Some(true);
                     }
                 }
-                if level == 0 { cantrips.push(row) } else { leveled.push(row) }
+                if level == 0 {
+                    cantrips.push(row)
+                } else {
+                    leveled.push(row)
+                }
             }
         }
         leveled.sort_by_key(|a| a.slot.unwrap_or(0));
@@ -724,11 +960,12 @@ impl<'a> Ctx<'a> {
             let mut best = 0;
             for h in arr(&m["atHigherLevels"]["higherLevelDefinitions"]) {
                 let lvl = int(&h["level"]).unwrap_or(99);
-                if lvl <= self.level && lvl >= best {
-                    if let Some(d) = text(&h["dice"]["diceString"]) {
-                        die = Some(dice_plus(d, fixed));
-                        best = lvl;
-                    }
+                if lvl <= self.level
+                    && lvl >= best
+                    && let Some(d) = text(&h["dice"]["diceString"])
+                {
+                    die = Some(dice_plus(d, fixed));
+                    best = lvl;
                 }
             }
         }
@@ -761,7 +998,12 @@ pub fn convert(raw: &Value) -> Result<Character> {
     ctx.spells(&mut features, &mut cantrips, &mut spells);
 
     let mut actions = Vec::new();
-    for (title, rows) in [("Weapons", weapons), ("Features", feats), ("Cantrips", cantrips), ("Spells", spells)] {
+    for (title, rows) in [
+        ("Weapons", weapons),
+        ("Features", feats),
+        ("Cantrips", cantrips),
+        ("Spells", spells),
+    ] {
         if !rows.is_empty() {
             actions.push(Action::section(title));
             actions.extend(rows);
@@ -769,16 +1011,28 @@ pub fn convert(raw: &Value) -> Result<Character> {
     }
     if actions.is_empty() {
         let dmg = (1 + ctx.abilities.modifier("str")).max(1);
-        actions.push(Action { name: Some("Unarmed Strike".into()), info: Some(format!("{dmg} bludgeoning")), ..Default::default() });
+        actions.push(Action {
+            name: Some("Unarmed Strike".into()),
+            info: Some(format!("{dmg} bludgeoning")),
+            ..Default::default()
+        });
     }
 
-    let race = text(&d["race"]["fullName"]).or_else(|| text(&d["race"]["baseName"])).map(ascii).unwrap_or_default();
-    let hit_die = ctx.primary_class().and_then(|c| int(&c["definition"]["hitDice"])).unwrap_or(8);
+    let race = text(&d["race"]["fullName"])
+        .or_else(|| text(&d["race"]["baseName"]))
+        .map(ascii)
+        .unwrap_or_default();
+    let hit_die = ctx
+        .primary_class()
+        .and_then(|c| int(&c["definition"]["hitDice"]))
+        .unwrap_or(8);
     let slots = ctx.slots();
 
     Ok(Character {
         key: format!("ddb{id}"),
-        name: text(&d["name"]).map(ascii).unwrap_or_else(|| "Unnamed".into()),
+        name: text(&d["name"])
+            .map(ascii)
+            .unwrap_or_else(|| "Unnamed".into()),
         race,
         class: ctx.class_label(),
         level: ctx.level,
@@ -791,8 +1045,16 @@ pub fn convert(raw: &Value) -> Result<Character> {
         hit_die,
         crit_range,
         // the halfling trait (reroll 1s), not the Lucky feat
-        lucky: arr(&d["race"]["racialTraits"]).iter().any(|t| t["definition"]["name"].as_str() == Some("Lucky")),
-        spell_ability: if slots.is_empty() && !actions.iter().any(|a| a.atk.as_deref() == Some("spell")) { None } else { ctx.spell_ability().map(str::to_string) },
+        lucky: arr(&d["race"]["racialTraits"])
+            .iter()
+            .any(|t| t["definition"]["name"].as_str() == Some("Lucky")),
+        spell_ability: if slots.is_empty()
+            && !actions.iter().any(|a| a.atk.as_deref() == Some("spell"))
+        {
+            None
+        } else {
+            ctx.spell_ability().map(str::to_string)
+        },
         slots,
         features,
         actions,
@@ -807,19 +1069,31 @@ mod tests {
     #[test]
     fn parses_ids_and_urls() {
         assert_eq!(parse_character_id("27935516").unwrap(), 27935516);
-        assert_eq!(parse_character_id("https://www.dndbeyond.com/characters/27935516/").unwrap(), 27935516);
-        assert_eq!(parse_character_id("https://www.dndbeyond.com/profile/x/characters/123?y=1").unwrap(), 123);
+        assert_eq!(
+            parse_character_id("https://www.dndbeyond.com/characters/27935516/").unwrap(),
+            27935516
+        );
+        assert_eq!(
+            parse_character_id("https://www.dndbeyond.com/profile/x/characters/123?y=1").unwrap(),
+            123
+        );
         assert!(parse_character_id("hello").is_err());
     }
 
     #[test]
     fn helpers() {
-        assert_eq!(ascii("Land\u{2019}s Stride \u{2014} Ren\u{e9}e"), "Land's Stride - Renee");
+        assert_eq!(
+            ascii("Land\u{2019}s Stride \u{2014} Ren\u{e9}e"),
+            "Land's Stride - Renee"
+        );
         assert_eq!(camel_id("Favored Foe"), "favoredFoe");
         assert_eq!(dice_plus("1d8", -1), "1d8-1");
         assert_eq!(modifier(9), -1);
         let v = serde_json::json!({"description": "<p>Regain {{scalevalue}} hit points&nbsp;&mdash; once.</p>"});
-        assert_eq!(rule_text(&v).as_deref(), Some("Regain X hit points - once."));
+        assert_eq!(
+            rule_text(&v).as_deref(),
+            Some("Regain X hit points - once.")
+        );
         let v = serde_json::json!({"snippet": "a ".repeat(300)});
         assert!(rule_text(&v).unwrap().len() <= 403);
         assert_eq!(rule_text(&serde_json::json!({})), None);
@@ -864,12 +1138,34 @@ mod tests {
         assert_eq!(c.saves, vec!["int"]);
         assert_eq!(c.skills.get("arcana"), Some(&1));
         assert_eq!(c.spell_ability.as_deref(), Some("int"));
-        let names: Vec<_> = c.actions.iter().filter_map(|a| a.name.clone().or(a.section.clone())).collect();
-        assert_eq!(names, ["Cantrips", "Fire Bolt", "Spells", "Burning Hands", "Magic Missile"]);
+        let names: Vec<_> = c
+            .actions
+            .iter()
+            .filter_map(|a| a.name.clone().or(a.section.clone()))
+            .collect();
+        assert_eq!(
+            names,
+            [
+                "Cantrips",
+                "Fire Bolt",
+                "Spells",
+                "Burning Hands",
+                "Magic Missile"
+            ]
+        );
         let fb = &c.actions[1];
-        assert_eq!((fb.atk.as_deref(), fb.hit, fb.dmg.as_deref()), (Some("spell"), Some(5), Some("1d10")));
+        assert_eq!(
+            (fb.atk.as_deref(), fb.hit, fb.dmg.as_deref()),
+            (Some("spell"), Some(5), Some("1d10"))
+        );
         let bh = &c.actions[3];
-        assert_eq!((bh.save.as_deref(), bh.dc, bh.slot), (Some("dex"), Some(13), Some(1)));
-        assert_eq!((c.actions[4].auto, c.actions[4].dmg.as_deref()), (Some(true), Some("3d4+3")));
+        assert_eq!(
+            (bh.save.as_deref(), bh.dc, bh.slot),
+            (Some("dex"), Some(13), Some(1))
+        );
+        assert_eq!(
+            (c.actions[4].auto, c.actions[4].dmg.as_deref()),
+            (Some(true), Some("3d4+3"))
+        );
     }
 }

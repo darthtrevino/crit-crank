@@ -130,6 +130,9 @@ pub struct Action {
 
 impl Action {
     pub fn section(title: &str) -> Self {
-        Action { section: Some(title.to_string()), ..Default::default() }
+        Action {
+            section: Some(title.to_string()),
+            ..Default::default()
+        }
     }
 }

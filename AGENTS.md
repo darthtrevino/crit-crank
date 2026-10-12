@@ -1,0 +1,57 @@
+# AGENTS.md
+
+Guidance for AI coding agents working on Crit Crank. Read this before you change anything.
+
+## Layout
+
+- `charsheet/`: the Playdate game, in Lua (SDK 3.x). The entry point is `source/main.lua`.
+  - `sheet.lua` builds the pages and rows.
+  - `ui.lua` draws them (fonts live in `UI.fonts`).
+  - `dice.lua` / `dice3d.lua` handle rolls and the 3D renderer.
+  - `resources.lua` covers HP, slots, rests and saved state.
+  - `rules.lua` holds the pause-screen rule text.
+  - `characters.lua` has the prebuilt heroes; `importer.lua` takes in heroes from charsync.
+  - `launcher/` holds the 1-bit card and icon art.
+- `charsync/`: Rust CLI. `ddb.rs` converts D&D Beyond JSON, `model.rs` is the game's character JSON, `transport.rs` handles USB serial and data-disk, and `main.rs` is the CLI.
+- `site/`: static GitHub Pages site. No build step: plain HTML, CSS and JS. `demo.js` is a browser imitation of the game.
+
+## Commands
+
+| Task | Command |
+| --- | --- |
+| Build game | `cd charsheet && make build` (or `pdc source charsheet.pdx`) |
+| Run in Simulator | `cd charsheet && make run` |
+| Lua lint | `charsheet/tools/lint.sh` (needs `luacheck` on **Lua 5.4**; it crashes on 5.5. Set `LUACHECK=` to point at the binary) |
+| Rust | `cd charsync && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
+| Site preview | `cd site && python3 -m http.server` |
+
+CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on PRs and on `main`. Keep all of them green. `pages.yml` deploys `site/` together with a freshly built `crit-crank.pdx.zip`.
+
+## Invariants
+
+- **Don't rename the bundle.** Keep `bundleID` `com.christrevino.charsheet`, the pdx name `charsheet.pdx`, and the `charsheet/` folder. Saved data, the device path `/Games/charsheet.pdx`, and charsync all depend on them. The display name "Crit Crank" lives only in `pdxinfo` and the docs.
+- New Lua globals must be added to `charsheet/.luacheckrc`.
+- When character JSON changes, update `model.rs` and the game's reader in step, and keep older imported files loading.
+- Never commit secrets, `charsync/target/`, or built `*.pdx`.
+- Don't copy copyrighted audio or art; synthesize sounds with `playdate.sound`.
+
+## Playdate Lua gotchas
+
+- The `+=`, `-=` and other compound operators are Playdate extensions. luacheck accepts them only through `.luacheckrc`.
+- In `drawText`, `*` and `_` are bold and italic markers. Double them (`**`, `__`) to print them literally, especially in user and D&D Beyond text.
+- `playdate.setMenuImage` shows only the left 200px of a 400×240 image.
+- The screen is 1-bit: draw art in black and white (no grey), and dither if needed.
+- `pdc` warnings matter; a clean build prints nothing.
+
+## Working with the user's hardware
+
+See the skills in `.github/skills/`: `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`.
+
+- **Never screenshot the user's desktop.** Capture the Simulator's framebuffer from Lua, or the device over serial.
+- The Simulator and `pdutil` hold the serial port, so close them before using charsync or serial scripts.
+- Process kills must use literal PIDs (`kill <pid>`); `pkill` and `killall` aren't allowed.
+- Microsoft Defender DLP on the dev Mac may block `diskutil eject` on the PLAYDATE volume. If it does, ask the user to eject.
+
+## Commits
+
+Use small, focused commits with imperative subjects. Run lint, the build and the tests before committing. Agent commits include the session's `Co-authored-by` trailer.

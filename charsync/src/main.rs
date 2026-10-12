@@ -103,10 +103,19 @@ fn run(cli: Cli) -> Result<()> {
             }
             println!("Removed {key}");
         }
-        Cmd::Import { character, file, simulator, disk, mount, out, no_launch } => {
+        Cmd::Import {
+            character,
+            file,
+            simulator,
+            disk,
+            mount,
+            out,
+            no_launch,
+        } => {
             let raw = match (&file, &character) {
                 (Some(f), _) => {
-                    let s = std::fs::read_to_string(f).with_context(|| format!("reading {}", f.display()))?;
+                    let s = std::fs::read_to_string(f)
+                        .with_context(|| format!("reading {}", f.display()))?;
                     serde_json::from_str(&s).context("file isn't valid JSON")?
                 }
                 (None, Some(c)) => {
@@ -118,7 +127,10 @@ fn run(cli: Cli) -> Result<()> {
             };
             let c = ddb::convert(&raw)?;
             let json = serde_json::to_string(&c)?;
-            let label = format!("{} (Lv{} {} {}, key {})", c.name, c.level, c.race, c.class, c.key);
+            let label = format!(
+                "{} (Lv{} {} {}, key {})",
+                c.name, c.level, c.race, c.class, c.key
+            );
 
             if let Some(out) = out {
                 let pretty = serde_json::to_string_pretty(&c)?;
@@ -129,8 +141,14 @@ fn run(cli: Cli) -> Result<()> {
                     eprintln!("Wrote {label} to {}", out.display());
                 }
             } else if simulator {
-                let path = transport::write_import(&transport::data_dir(&transport::simulator_disk()?), &c)?;
-                println!("Installed {label} in the Simulator ({}). Relaunch charsheet to see it.", path.display());
+                let path = transport::write_import(
+                    &transport::data_dir(&transport::simulator_disk()?),
+                    &c,
+                )?;
+                println!(
+                    "Installed {label} in the Simulator ({}). Relaunch charsheet to see it.",
+                    path.display()
+                );
             } else if disk {
                 let root = match mount.or_else(transport::find_mount) {
                     Some(m) => m,

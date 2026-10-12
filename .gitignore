@@ -1,3 +1,5 @@
 charsheet/*.pdx
 .DS_Store
 charsync/target/
+.impeccable/
+site/crit-crank.pdx.zip

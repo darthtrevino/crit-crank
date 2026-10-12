@@ -351,7 +351,7 @@ function Dice3D.draw(body, cx, cy, r, label, style, font)
 
 	local frontFace, frontZ = nil, -1
 	local visible = {}
-	for fi, f in ipairs(solid.faces) do
+	for _, f in ipairs(solid.faces) do
 		local n = f.n
 		local nz = m[7] * n[1] + m[8] * n[2] + m[9] * n[3]
 		if nz > 0.01 then
