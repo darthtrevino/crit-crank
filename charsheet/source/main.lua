@@ -44,6 +44,7 @@ local state = {
 	preview = nil,  -- resting 3D dice for the selected row
 	res = nil,      -- tracked resources for the current character
 	allRes = {},    -- saved resources per character key
+	allView = {},   -- saved page, selection, d20 mode, crit, last cast and pool per character key
 	lastCast = nil, -- actionKey of the last action that spent a resource
 	toast = nil,
 	toastFrames = 0,
@@ -174,7 +175,7 @@ end
 
 local function ensureVisible(p)
 	p = p or state.page
-	local rows = currentPage().rows
+	local rows = state.pages[p].rows
 	local sel = state.sel[p]
 	local scroll = state.scroll[p] or 0
 	-- keep the section header above the selection in view when possible
@@ -339,25 +340,68 @@ local function adjustRow(row, delta)
 	end
 end
 
+-- Selection is stored by page title and row identity so it survives sheet changes.
+local function captureView()
+	local v = {
+		page = state.pages[state.page].title, sel = {}, scroll = {}, mode = state.mode,
+		critPending = state.critPending, lastCast = state.lastCast, pool = state.pool,
+	}
+	for p, page in ipairs(state.pages) do
+		v.sel[page.title] = rowId(page.rows[state.sel[p]])
+		v.scroll[page.title] = state.scroll[p]
+	end
+	return v
+end
+
+local function cleanPool(pool)
+	local clean = {}
+	if type(pool) == "table" then
+		for k, n in pairs(pool) do
+			if type(k) == "string" and type(n) == "number" then clean[k] = math.floor(n) end
+		end
+	end
+	return clean
+end
+
+local function restoreView(v)
+	v = type(v) == "table" and v or {}
+	local sel = type(v.sel) == "table" and v.sel or {}
+	local scroll = type(v.scroll) == "table" and v.scroll or {}
+	state.page = 1
+	state.sel, state.scroll = {}, {}
+	for p, page in ipairs(state.pages) do
+		state.sel[p] = firstSelectable(page.rows)
+		for i, r in ipairs(page.rows) do
+			if isSelectable(r) and rowId(r) == sel[page.title] then
+				state.sel[p] = i
+				break
+			end
+		end
+		state.scroll[p] = math.max(0, math.floor(tonumber(scroll[page.title]) or 0))
+		ensureVisible(p)
+		if page.title == v.page then state.page = p end
+	end
+	state.mode = (v.mode == "adv" or v.mode == "dis") and v.mode or "normal"
+	state.critPending = v.critPending == true
+	state.lastCast = type(v.lastCast) == "string" and v.lastCast or nil
+	state.pool = cleanPool(v.pool)
+end
+
 local function loadCharacter(i)
-	if state.res then state.allRes[character().key] = state.res end
+	if state.res then
+		state.allRes[character().key] = state.res
+		state.allView[character().key] = captureView()
+	end
 	state.charIndex = i
 	local key = Characters[i].key
 	state.res = Resources.load(Characters[i], state.allRes[key])
 	state.allRes[key] = state.res
-	state.lastCast = nil
 	state.dying = Resources.dying(state.res)
 	state.pages = Sheet.build(Characters[i], state.dying)
+	restoreView(state.allView[key])
 	refreshPool()
-	state.sel, state.scroll = {}, {}
-	for p, page in ipairs(state.pages) do
-		state.sel[p] = firstSelectable(page.rows)
-		state.scroll[p] = 0
-	end
 	state.roll = nil
 	state.rest = nil
-	state.critPending = false
-	state.mode = "normal"
 end
 
 local function diceMoving()
@@ -529,6 +573,7 @@ local function finishLanding()
 		state.critPending = roll.result.crit and roll.row.rollKind == "check"
 			and currentPage().title == "ACTIONS"
 		state.mode = "normal"
+		state.dirty = true
 	end
 	if roll.row.selfHeal then
 		local c = character()
@@ -695,6 +740,7 @@ function pd.BButtonDown()
 	end
 	local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
 	state.mode = nextMode[state.mode]
+	state.dirty = true
 	if state.roll then state.roll = nil end
 end
 
@@ -788,8 +834,9 @@ end
 
 local function save()
 	state.allRes[character().key] = state.res
+	state.allView[character().key] = captureView()
 	pd.datastore.write({
-		charKey = character().key, resources = state.allRes, pool = state.pool,
+		charKey = character().key, resources = state.allRes, views = state.allView,
 	})
 	state.dirty = false
 end
@@ -800,12 +847,16 @@ if saved and type(saved.resources) == "table" then
 		if type(k) == "string" and type(r) == "table" then state.allRes[k] = r end
 	end
 end
-if saved and type(saved.pool) == "table" then
-	for k, v in pairs(saved.pool) do
-		if type(v) == "number" then state.pool[k] = math.floor(v) end
+if saved and type(saved.views) == "table" then
+	for k, v in pairs(saved.views) do
+		if type(k) == "string" and type(v) == "table" then state.allView[k] = v end
 	end
 end
 local savedKey = saved and (saved.charKey or (saved.charIndex and tostring(saved.charIndex)))
+-- Older saves kept one shared dice pool; give it to the hero who was active.
+if savedKey and saved and type(saved.pool) == "table" and not state.allView[savedKey] then
+	state.allView[savedKey] = { pool = saved.pool }
+end
 loadCharacter(indexOfKey(savedKey) or 1)
 
 local menu = pd.getSystemMenu()
@@ -881,6 +932,7 @@ Importer.listen({
 		local current = character().key
 		save()
 		state.allRes[key] = nil
+		state.allView[key] = nil
 		state.res = nil
 		rebuildCharacters()
 		loadCharacter(indexOfKey(current) or 1)
