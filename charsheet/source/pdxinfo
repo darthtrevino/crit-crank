@@ -1,0 +1,6 @@
+name=charsheet
+author=Chris Trevino
+description=A D&D character sheet with crank-powered dice.
+bundleID=com.christrevino.charsheet
+version=0.1
+buildNumber=1
