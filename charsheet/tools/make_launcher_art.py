@@ -23,7 +23,10 @@ def d20(d, cx, cy, r, lw, num=True, font_px=None):
     if num:
         d.polygon(T, fill=0)
         f = ImageFont.truetype(FONT, font_px)
-        d.text((cx, cy + 0.13*r), "20", font=f, fill=255, anchor="mm")
+        # center the glyph ink (not the font metrics) on the facet's centroid
+        x0, y0, x1, y1 = d.textbbox((0, 0), "20", font=f, anchor="lt")
+        gx, gy = sum(p[0] for p in T) / 3, sum(p[1] for p in T) / 3 + 0.04*r
+        d.text((gx - (x0 + x1) / 2, gy - (y0 + y1) / 2), "20", font=f, fill=255, anchor="lt")
 
 def crank(d, hx, hy, r, lw, angle=35):
     # hub on the die's right side, arm and knob
@@ -57,7 +60,7 @@ def card():
     d.rounded_rectangle([3*S, 3*S, W-4*S, H-4*S], radius=10*S, outline=0, width=3*S)
     cx, cy, r = 72*S, 72*S, 48*S
     burst(d, cx, cy, r*1.12, r*1.36, 16, 3*S, skip=((-1, 75),))
-    d20(d, cx, cy, r, 3*S, font_px=19*S)
+    d20(d, cx, cy, r, 3*S, font_px=17*S)
     crank(d, cx + r*0.87, cy + r*0.0, r, 3*S, angle=40)
     f = ImageFont.truetype(FONT, 42*S)
     tx = 152*S
