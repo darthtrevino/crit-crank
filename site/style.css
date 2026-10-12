@@ -179,8 +179,9 @@ main p { max-width: 44rem; }
 	color: var(--body) !important; font-weight: 700 !important; font-size: calc(2.8 * var(--mm)) !important;
 	box-shadow: 0 calc(.6 * var(--mm)) 0 #000;
 }
-.pd-b { left: calc(45 * var(--mm)); top: calc(57.5 * var(--mm)); }
-.pd-a { left: calc(59 * var(--mm)); top: calc(52.5 * var(--mm)); }
+.pd-b, .pd-a { top: calc(55.5 * var(--mm)); }
+.pd-b { left: calc(46 * var(--mm)); }
+.pd-a { left: calc(60 * var(--mm)); }
 .pd button:not(.pd-menu).is-down, .pd button:not(.pd-menu):active { translate: 0 calc(.5 * var(--mm)); box-shadow: 0 calc(.1 * var(--mm)) 0 #000; }
 
 .pd-speaker {
