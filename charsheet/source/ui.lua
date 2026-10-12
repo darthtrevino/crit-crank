@@ -49,13 +49,13 @@ UI.fit = fit
 
 ---------------------------------------------------------------- header / tabs
 
-function UI.drawHeader(c)
+function UI.drawHeader(c, hp)
 	gfx.setColor(gfx.kColorBlack)
 	gfx.fillRect(0, 0, UI.W, UI.HEADER_H)
 	gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
 	drawText(fonts.title, c.name, 6, 3)
 	local nameW = textW(fonts.title, c.name)
-	local stats = "AC " .. c.ac .. "  HP " .. c.hp .. "  " .. c.speed .. "ft"
+	local stats = "AC " .. c.ac .. "  HP " .. hp .. "/" .. c.hp .. "  " .. c.speed .. "ft"
 	local statsW = textW(fonts.small, stats)
 	local room = UI.W - 6 - statsW - 10 - (12 + nameW)
 	local sub = "Lv" .. c.level .. " " .. c.race .. " " .. c.class
@@ -95,7 +95,26 @@ local function drawMark(mark, x, cy)
 	end
 end
 
-function UI.drawList(page, sel, scroll, critPending)
+local PIP_GAP = 11
+
+local function drawPips(cur, max, rightX, cy)
+	for i = 1, max do
+		local x = rightX - (max - i) * PIP_GAP - 4
+		if i <= cur then
+			gfx.fillCircleAtPoint(x, cy, 4)
+		else
+			gfx.drawCircleAtPoint(x, cy, 4)
+		end
+	end
+end
+
+-- Small counters are drawn as pips; HP and big pools as "cur/max".
+local function usePips(key, max)
+	return key ~= "hp" and max <= 6
+end
+
+-- getResource(key) -> cur, max
+function UI.drawList(page, sel, scroll, critPending, getResource)
 	local rows = page.rows
 	local valueX = UI.LIST_W - 8
 	for vi = 1, UI.VISIBLE_ROWS do
@@ -132,7 +151,18 @@ function UI.drawList(page, sel, scroll, critPending)
 			drawMark(row.mark, 10, y + UI.ROW_H / 2)
 
 			local valueFont = fonts.body
-			local valueW = textW(valueFont, row.value or "")
+			local value = row.value
+			local pips
+			if row.kind == "resource" then
+				local cur, max = getResource(row.key)
+				if usePips(row.key, max) then
+					pips = { cur, max }
+					value = nil
+				else
+					value = cur .. "/" .. max
+				end
+			end
+			local valueW = pips and (pips[2] * PIP_GAP) or textW(valueFont, value or "")
 			local labelFont = row.indent and fonts.small or fonts.body
 			local detailW = row.detail and (textW(fonts.small, row.detail) + 8) or 0
 			local labelRoom = valueX - valueW - labelX - 6
@@ -144,8 +174,10 @@ function UI.drawList(page, sel, scroll, critPending)
 			if showDetail then
 				drawText(fonts.small, row.detail, valueX - valueW - 8, y + 5, "right")
 			end
-			if row.value then
-				drawText(valueFont, row.value, valueX, textY, "right")
+			if value then
+				drawText(valueFont, value, valueX, textY, "right")
+			elseif pips then
+				drawPips(pips[1], pips[2], valueX, y + UI.ROW_H / 2)
 			end
 			if critPending and row.critable and not selected then
 				drawText(fonts.small, "x2", valueX - valueW - detailW - 4, y + 5, "right")
@@ -233,6 +265,21 @@ function UI.drawTray(t)
 	local title = row.title or row.label
 	drawText(fonts.small, fit(fonts.small, title, TRAY_W), TRAY_CX, y, "center")
 
+	if row.kind == "resource" then
+		local cur, max = t.getResource(row.key)
+		if row.detail then
+			drawText(fonts.small, row.detail, TRAY_CX, y + 16, "center")
+		end
+		drawText(fonts.big, tostring(cur), TRAY_CX, y + 50, "center")
+		drawText(fonts.small, "of " .. max, TRAY_CX, y + 90, "center")
+		if usePips(row.key, max) then
+			drawPips(cur, max, TRAY_CX + math.floor(max * PIP_GAP / 2), y + 118)
+		end
+		drawText(fonts.small, "🎣 adjust", TRAY_CX, y + 140, "center")
+		drawText(fonts.small, "Ⓐ -1   Ⓑ +1", TRAY_CX, y + 158, "center")
+		return
+	end
+
 	local roll = t.roll
 	local spec = roll and roll.spec or t.spec
 	local tag
@@ -296,9 +343,21 @@ end
 
 ---------------------------------------------------------------- footer
 
-function UI.drawFooter(mode)
+function UI.drawFooter(mode, toast)
 	gfx.setColor(gfx.kColorBlack)
 	gfx.drawLine(0, UI.FOOTER_Y, UI.W, UI.FOOTER_Y)
+	if toast then
+		gfx.fillRect(0, UI.FOOTER_Y, UI.W, UI.H - UI.FOOTER_Y)
+		gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+		drawText(fonts.small, fit(fonts.small, toast, UI.W - 12), UI.W / 2, UI.FOOTER_Y + 2, "center")
+		gfx.setImageDrawMode(gfx.kDrawModeCopy)
+		return
+	end
+	if mode == "resource" then
+		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 adjust", 6, UI.FOOTER_Y + 2)
+		drawText(fonts.small, "Ⓐ -1  Ⓑ +1", UI.W - 6, UI.FOOTER_Y + 2, "right")
+		return
+	end
 	local modeText = (mode == "adv" and "ADV") or (mode == "dis" and "DIS") or "normal"
 	drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, UI.FOOTER_Y + 2)
 	drawText(fonts.small, "Ⓑ " .. modeText, UI.W - 6, UI.FOOTER_Y + 2, "right")

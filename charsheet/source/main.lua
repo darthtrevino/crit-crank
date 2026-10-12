@@ -6,6 +6,7 @@ import "CoreLibs/timer"
 import "dice"
 import "dice3d"
 import "characters"
+import "resources"
 import "sheet"
 import "ui"
 
@@ -17,6 +18,8 @@ local CRANK_START = 30   -- rotation needed to pick up the dice
 local CRANK_TICK = 40    -- rotation per face change while tumbling
 local SETTLE_FRAMES = 8  -- frames of stillness before the dice land
 local AUTO_FRAMES = 16   -- length of the Ⓐ-button quick roll
+local CRANK_ADJUST = 20  -- rotation per ±1 on a resource row
+local TOAST_FRAMES = 75
 
 math.randomseed(pd.getSecondsSinceEpoch())
 pd.display.setRefreshRate(30)
@@ -31,9 +34,15 @@ local state = {
 	critPending = false,
 	roll = nil,
 	preview = nil,  -- resting 3D dice for the selected row
+	res = nil,      -- tracked resources for the current character
+	allRes = {},    -- saved resources per character index
+	lastCast = nil, -- actionKey of the last action that spent a resource
+	toast = nil,
+	toastFrames = 0,
+	dirty = false,
 }
 
-local crank = { windup = 0, tick = 0, idle = 0 }
+local crank = { windup = 0, tick = 0, idle = 0, adjust = 0 }
 
 ---------------------------------------------------------------- sound
 
@@ -63,7 +72,7 @@ local function currentPage()
 end
 
 local function isSelectable(row)
-	return row and row.kind == "roll"
+	return row and (row.kind == "roll" or row.kind == "resource")
 end
 
 local function firstSelectable(rows)
@@ -102,8 +111,42 @@ local function selectedRow()
 	return nil
 end
 
+local function selectedRollRow()
+	local row = selectedRow()
+	if row and row.kind == "roll" then return row end
+	return nil
+end
+
+---------------------------------------------------------------- resources
+
+local function character()
+	return Characters[state.charIndex]
+end
+
+local function toast(msg)
+	state.toast = msg
+	state.toastFrames = TOAST_FRAMES
+end
+
+local function getResource(key)
+	return Resources.get(character(), state.res, key)
+end
+
+local function adjustResource(key, delta)
+	local before = state.res[key]
+	local after = Resources.add(character(), state.res, key, delta)
+	if after ~= before then
+		state.dirty = true
+		tickSynth:playNote(delta > 0 and 900 or 500, 0.1, 0.02)
+	end
+end
+
 local function loadCharacter(i)
+	if state.res then state.allRes[state.charIndex] = state.res end
 	state.charIndex = i
+	state.res = Resources.load(Characters[i], state.allRes[i])
+	state.allRes[i] = state.res
+	state.lastCast = nil
 	state.pages = Sheet.build(Characters[i])
 	state.sel, state.scroll = {}, {}
 	for p, page in ipairs(state.pages) do
@@ -183,8 +226,29 @@ local function spinAll(amount)
 end
 
 local function startRoll(auto)
-	local row = selectedRow()
+	local row = selectedRollRow()
 	if not row then return end
+	local cost = row.cost
+	if cost and cost.strict and row.selfHeal and state.res.hp >= character().hp then
+		toast("Already at full HP")
+		return
+	end
+	if cost and (cost.each or row.actionKey ~= state.lastCast) then
+		local c = character()
+		local label = Resources.label(c, cost.key)
+		if Resources.spend(c, state.res, cost.key) then
+			state.dirty = true
+			local left = state.res[cost.key]
+			toast("Used " .. label .. " (" .. left .. " left)")
+		elseif cost.strict then
+			toast("No " .. label .. " left")
+			landSynth:playNote(131, 0.3, 0.2)
+			return
+		else
+			toast("Out of " .. label .. "! Rolling anyway")
+		end
+	end
+	state.lastCast = row.actionKey
 	local spec, crit = effectiveSpec(row)
 	local faces = Dice.faces(spec)
 	local bodies = {}
@@ -224,6 +288,13 @@ local function finishLanding()
 		state.critPending = roll.result.crit and roll.row.rollKind == "check"
 			and currentPage().title == "ACTIONS"
 		state.mode = "normal"
+	end
+	if roll.row.selfHeal then
+		local c = character()
+		local before = state.res.hp
+		local after = Resources.add(c, state.res, "hp", math.max(0, roll.result.total))
+		state.dirty = true
+		toast("Healed " .. (after - before) .. " HP (" .. after .. "/" .. c.hp .. ")")
 	end
 	playLand(roll.result)
 end
@@ -273,6 +344,18 @@ local function updateRoll()
 		return
 	end
 
+	local sel = selectedRow()
+	if sel and sel.kind == "resource" then
+		crank.adjust += change
+		while math.abs(crank.adjust) >= CRANK_ADJUST do
+			local dir = crank.adjust > 0 and 1 or -1
+			crank.adjust -= dir * CRANK_ADJUST
+			adjustResource(sel.key, dir)
+		end
+		return
+	end
+	crank.adjust = 0
+
 	if amount > 0.5 then
 		crank.idle = 0
 		crank.windup += amount
@@ -309,13 +392,29 @@ function pd.downButtonUp() release("down") end
 function pd.leftButtonDown() changePage(-1) end
 function pd.rightButtonDown() changePage(1) end
 
+local function resourceRow()
+	local row = selectedRow()
+	if row and row.kind == "resource" then return row end
+end
+
 function pd.AButtonDown()
 	if diceMoving() then return end
+	local r = resourceRow()
+	if r then
+		holdRepeat("a", function() adjustResource(r.key, -1) end)
+		return
+	end
 	startRoll(true)
 end
+function pd.AButtonUp() release("a") end
 
 function pd.BButtonDown()
 	if diceMoving() then return end
+	local r = resourceRow()
+	if r then
+		holdRepeat("b", function() adjustResource(r.key, 1) end)
+		return
+	end
 	local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
 	state.mode = nextMode[state.mode]
 	if state.roll then state.roll = nil end
@@ -323,11 +422,24 @@ end
 
 ---------------------------------------------------------------- persistence / menu
 
+function pd.BButtonUp() release("b") end
+
 local function save()
-	pd.datastore.write({ charIndex = state.charIndex })
+	state.allRes[state.charIndex] = state.res
+	-- string keys: the datastore is JSON
+	local res = {}
+	for i, r in pairs(state.allRes) do res[tostring(i)] = r end
+	pd.datastore.write({ charIndex = state.charIndex, resources = res })
+	state.dirty = false
 end
 
 local saved = pd.datastore.read()
+if saved and type(saved.resources) == "table" then
+	for k, r in pairs(saved.resources) do
+		local i = tonumber(k)
+		if i and Characters[i] then state.allRes[i] = r end
+	end
+end
 loadCharacter((saved and Characters[saved.charIndex or 0]) and saved.charIndex or 1)
 
 local names = {}
@@ -336,14 +448,38 @@ for i, c in ipairs(Characters) do
 	if names[i] == "Brother" then names[i] = c.name:match("(%S+)$") end
 end
 
-pd.getSystemMenu():addOptionsMenuItem("Hero", names, names[state.charIndex], function(choice)
+local menu = pd.getSystemMenu()
+
+menu:addOptionsMenuItem("Hero", names, names[state.charIndex], function(choice)
 	for i, n in ipairs(names) do
-		if n == choice then
+		if n == choice and i ~= state.charIndex then
 			loadCharacter(i)
 			save()
 		end
 	end
 end)
+
+local function shortRest()
+	local restored = Resources.shortRest(character(), state.res)
+	state.lastCast = nil
+	if #restored > 0 then
+		toast("Short rest: " .. table.concat(restored, ", ") .. " restored")
+	else
+		toast("Short rest: spend Hit Dice on STATUS to heal")
+	end
+	save()
+end
+
+local function longRest()
+	local regained = Resources.longRest(character(), state.res)
+	state.lastCast = nil
+	state.critPending = false
+	toast("Long rest: fully restored, +" .. regained .. " Hit Dice")
+	save()
+end
+
+menu:addMenuItem("Short Rest", shortRest)
+menu:addMenuItem("Long Rest", longRest)
 
 function pd.gameWillTerminate() save() end
 function pd.deviceWillSleep() save() end
@@ -353,21 +489,37 @@ function pd.deviceWillSleep() save() end
 function pd.update()
 	pd.timer.updateTimers()
 	updateRoll()
+	if state.toastFrames > 0 then
+		state.toastFrames -= 1
+		if state.toastFrames == 0 then state.toast = nil end
+	end
+	-- save shortly after changes settle
+	if state.dirty and not diceMoving() then
+		state.dirtyFrames = (state.dirtyFrames or 0) + 1
+		if state.dirtyFrames > 30 then
+			state.dirtyFrames = 0
+			save()
+		end
+	end
 
 	gfx.clear(gfx.kColorWhite)
 	local c = Characters[state.charIndex]
 	local page = currentPage()
 
-	UI.drawHeader(c)
+	UI.drawHeader(c, state.res.hp)
 	UI.drawTabs(state.pages, state.page)
-	UI.drawList(page, state.sel[state.page], state.scroll[state.page], state.critPending)
+	UI.drawList(page, state.sel[state.page], state.scroll[state.page], state.critPending, getResource)
 
 	local row = selectedRow()
-	local tray = { row = row, mode = state.mode, critPending = state.critPending, roll = state.roll }
-	if row then
+	local tray = {
+		row = row, mode = state.mode, critPending = state.critPending, roll = state.roll,
+		getResource = getResource,
+	}
+	if row and row.kind == "roll" then
 		tray.spec = effectiveSpec(row)
 		tray.preview = previewFor(row)
 	end
 	UI.drawTray(tray)
-	UI.drawFooter(state.mode)
+	UI.drawFooter((row and row.kind == "resource") and "resource" or state.mode, state.toast)
 end
+

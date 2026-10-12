@@ -6,6 +6,10 @@
 --   roll:   { kind="roll", label, detail, value, spec, mark, indent, rollKind, critable }
 --     mark: nil | "none" | "prof" | "exp"   (proficiency marker)
 --     rollKind: "check" | "damage" | "heal"
+--     cost: { key, strict } resource spent once per cast (see main.lua)
+--     actionKey: groups the rows of one action (attack + damage) into one cast
+--     selfHeal: apply the rolled total to current HP
+--   resource: { kind="resource", key, label, detail }  live tracked counter
 
 Sheet = {}
 
@@ -128,7 +132,14 @@ end
 local function actionsPage(c)
 	local rows = {}
 	local pb = Sheet.proficiency(c.level)
-	for _, a in ipairs(c.actions) do
+	for ai, a in ipairs(c.actions) do
+		local cost = nil
+		if a.slot then
+			cost = { key = "slot" .. a.slot }
+		elseif a.uses then
+			cost = { key = a.uses }
+		end
+		local first = #rows + 1
 		if a.section then
 			rows[#rows + 1] = { kind = "header", label = a.section }
 		elseif a.info then
@@ -165,8 +176,48 @@ local function actionsPage(c)
 				title = a.name .. (a.type and (" (" .. a.type .. ")") or ""),
 			}
 		end
+		local rollRows = 0
+		for i = first, #rows do
+			if rows[i].kind == "roll" then rollRows += 1 end
+		end
+		-- single-roll actions spend on every roll; multi-roll ones once per cast
+		if cost then cost.each = rollRows == 1 end
+		for i = first, #rows do
+			if rows[i].kind == "roll" then
+				rows[i].actionKey = "action" .. ai
+				rows[i].cost = cost
+				rows[i].selfHeal = a.selfHeal
+			end
+		end
 	end
 	return { title = "ACTIONS", rows = rows }
+end
+
+local function statusPage(c)
+	local rows = {}
+	rows[#rows + 1] = { kind = "header", label = "Health" }
+	rows[#rows + 1] = { kind = "resource", key = "hp", label = "Hit Points" }
+	rows[#rows + 1] = { kind = "resource", key = "hitDice", label = "Hit Dice", detail = "d" .. c.hitDie }
+	local con = Sheet.mod(c.abilities.con)
+	local expr = "1d" .. c.hitDie .. (con ~= 0 and signed(con) or "")
+	rows[#rows + 1] = {
+		kind = "roll", label = "Spend Hit Die", value = expr, spec = Dice.parse(expr),
+		rollKind = "heal", cost = { key = "hitDice", strict = true, each = true }, selfHeal = true,
+		actionKey = "hitDie", indent = true,
+	}
+	if c.slots and #c.slots > 0 then
+		rows[#rows + 1] = { kind = "header", label = "Spell Slots" }
+		for lvl in ipairs(c.slots) do
+			rows[#rows + 1] = { kind = "resource", key = "slot" .. lvl, label = "Level " .. lvl }
+		end
+	end
+	if c.features and #c.features > 0 then
+		rows[#rows + 1] = { kind = "header", label = "Features" }
+		for _, f in ipairs(c.features) do
+			rows[#rows + 1] = { kind = "resource", key = f.id, label = f.name, detail = f.reset }
+		end
+	end
+	return { title = "STATUS", rows = rows }
 end
 
 local function dicePage()
@@ -193,6 +244,7 @@ function Sheet.build(c)
 		savesPage(c),
 		skillsPage(c),
 		actionsPage(c),
+		statusPage(c),
 		dicePage(),
 	}
 end
