@@ -95,6 +95,31 @@ local function playHorn()
 	pd.timer.performAfterDelay(380, function() hornBlast(0.9) end)
 end
 
+-- Sad trombone for natural 1s: wah wah wah waaaaah, muted brass with a wobble.
+local trombone = pd.sound.synth.new(pd.sound.kWaveSawtooth)
+trombone:setADSR(0.04, 0.1, 0.8, 0.15)
+local tromboneLFO = pd.sound.lfo.new(pd.sound.kLFOSine)
+tromboneLFO:setRate(5.5)
+tromboneLFO:setDepth(0)
+trombone:setFrequencyMod(tromboneLFO)
+local tromboneFilter = pd.sound.twopolefilter.new(pd.sound.kFilterLowPass)
+tromboneFilter:setFrequency(1100)
+tromboneFilter:setResonance(0.5)
+local tromboneChannel = pd.sound.channel.new()
+tromboneChannel:addEffect(tromboneFilter)
+tromboneChannel:addSource(trombone)
+
+local function playTrombone()
+	local notes = { 233.1, 220.0, 207.7, 196.0 } -- Bb A Ab G
+	for i, f in ipairs(notes) do
+		local last = i == #notes
+		pd.timer.performAfterDelay((i - 1) * 430, function()
+			tromboneLFO:setDepth(last and 0.25 or 0)
+			trombone:playNote(f, 0.45, last and 1.3 or 0.32)
+		end)
+	end
+end
+
 ---------------------------------------------------------------- selection
 
 local function currentPage()
@@ -411,8 +436,12 @@ local function finishLanding()
 	end
 	playLand(roll.result)
 	-- dice pools (Dice page) stay quiet
-	if roll.result.natural == 20 and roll.row.rollKind ~= "pool" then
-		playHorn()
+	if roll.row.rollKind ~= "pool" then
+		if roll.result.natural == 20 then
+			playHorn()
+		elseif roll.result.natural == 1 then
+			playTrombone()
+		end
 	end
 end
 
