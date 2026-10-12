@@ -155,6 +155,13 @@ local function describeResource(c, row)
 			body = "During a short rest, spend Hit Dice to heal: each one heals d" .. c.hitDie ..
 				" + CON modifier. A long rest gives back half your total (at least 1).",
 		}
+	elseif key == "deathSaves" or key == "deathFails" then
+		return {
+			title = key == "deathSaves" and "Death Save Successes" or "Death Save Failures", sub = "At 0 HP",
+			body = "Three successes and you're stable; three failures and you die. Taking damage at 0 HP " ..
+				"is a failure (a critical hit is two). Rolling Death Save here records it for you; " ..
+				"any healing clears both.\n\nCrank or Ⓐ/Ⓑ to adjust.",
+		}
 	elseif key:match("^slot%d+$") then
 		local lvl = tonumber(key:sub(5))
 		return {

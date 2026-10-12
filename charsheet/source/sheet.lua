@@ -9,6 +9,7 @@
 --     cost: { key, strict } resource spent once per cast (see main.lua)
 --     actionKey: groups the rows of one action (attack + damage) into one cast
 --     selfHeal: apply the rolled total to current HP
+--     deathSave: at 0 HP, record the result as a death save success/failure
 --   resource: { kind="resource", key, label, detail }  live tracked counter
 --   counter:  { kind="counter", key, label }  custom dice pool builder entry
 --   rest:     { kind="rest", key="short"|"long", label, detail }  crank to confirm a rest
@@ -112,7 +113,7 @@ local function savesPage(c)
 	rows[#rows + 1] = { kind = "header", label = "Other" }
 	rows[#rows + 1] = {
 		kind = "roll", label = "Death Save", detail = "10+ ok", value = "d20",
-		spec = Dice.check(0), rollKind = "check", help = { kind = "death" },
+		spec = Dice.check(0), rollKind = "check", help = { kind = "death" }, deathSave = true,
 	}
 	return { title = "SAVES", rows = rows }
 end
@@ -199,8 +200,17 @@ local function actionsPage(c)
 	return { title = "ACTIONS", rows = rows }
 end
 
-local function statusPage(c)
+local function statusPage(c, dying)
 	local rows = {}
+	if dying then
+		rows[#rows + 1] = { kind = "header", label = "Dying" }
+		rows[#rows + 1] = {
+			kind = "roll", label = "Death Save", detail = "10+ ok", value = "d20",
+			spec = Dice.check(0), rollKind = "check", help = { kind = "death" }, deathSave = true,
+		}
+		rows[#rows + 1] = { kind = "resource", key = "deathSaves", label = "Successes", indent = true }
+		rows[#rows + 1] = { kind = "resource", key = "deathFails", label = "Failures", indent = true }
+	end
 	rows[#rows + 1] = { kind = "header", label = "Health" }
 	rows[#rows + 1] = { kind = "resource", key = "hp", label = "Hit Points" }
 	rows[#rows + 1] = { kind = "resource", key = "hitDice", label = "Hit Dice", detail = "d" .. c.hitDie }
@@ -270,13 +280,14 @@ local function dicePage()
 	return { title = "DICE", rows = rows }
 end
 
-function Sheet.build(c)
+-- dying: the character is at 0 HP, so STATUS shows death save tracking.
+function Sheet.build(c, dying)
 	return {
 		abilitiesPage(c),
 		savesPage(c),
 		skillsPage(c),
 		actionsPage(c),
-		statusPage(c),
+		statusPage(c, dying),
 		dicePage(),
 	}
 end
