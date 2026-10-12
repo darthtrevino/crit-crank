@@ -66,3 +66,7 @@ The hero is selected straight away and stays in the Hero menu. Importing the sam
 - `source/rules.lua`: rule text for the pause screen
 - `source/ui.lua`: drawing (header, tabs, list, dice tray, toasts, pause-screen card)
 - `source/main.lua`: input, crank roll logic, resource spending, rests, sound, saving, and the main loop
+
+## License
+
+MIT. See [LICENSE](../LICENSE). The fonts in `source/fonts/` belong to Panic and are excluded from the MIT grant. They are used under the Playdate SDK License (see [source/fonts/README.md](source/fonts/README.md)).
