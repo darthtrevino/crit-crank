@@ -78,32 +78,68 @@ local function playLand(result)
 	end
 end
 
--- Celebratory horn for natural 20s: BWA-BWA-BWAAAAA, a brassy Bb major
--- chord on a stack of detuned saws.
-local HORN_FREQS = { 233.1, 234.4, 293.7, 295.2, 349.2, 466.2 }
-local hornVoices = {}
-for i, _ in ipairs(HORN_FREQS) do
-	local v = pd.sound.synth.new(pd.sound.kWaveSawtooth)
-	v:setADSR(0.015, 0.05, 0.85, 0.12)
-	hornVoices[i] = v
-end
+-- DJ air horn for natural 20s: BRAP-BRAP-BRAP-BRAAAAP. Each blast is an
+-- octave-down saw for body, a detuned saw pair and a square for bite, and a
+-- quiet octave-up saw, through a gentle low-pass. The long blast holds, slides
+-- down a little and holds there as it fades. Tune it with the sound-design
+-- skill's tuner; keep HORN in step with site/sim/sound.js.
+local HORN = {
+	hitHz = 587.3, -- pitch of the short hits
+	hitMs = 155,   -- time between hits
+	hz = 740,      -- pitch of the long blast
+	sagAt = 150,   -- ms the long blast holds before dropping
+	sag = -4.05,   -- half-steps it drops
+	sagMs = 20,    -- ms the drop takes
+	holdMs = 310,  -- ms it holds the low note before fading
+}
+local HORN_VOICES = { -- pitch ratio, wave, volume
+	{ 0.5, pd.sound.kWaveSawtooth, 0.20 },
+	{ 737 / 740, pd.sound.kWaveSawtooth, 0.15 },
+	{ 743.5 / 740, pd.sound.kWaveSawtooth, 0.15 },
+	{ 1, pd.sound.kWaveSquare, 0.12 },
+	{ 2, pd.sound.kWaveSawtooth, 0.06 },
+}
+local hornSag = pd.sound.lfo.new(pd.sound.kLFOSine)
+hornSag:setDepth(0)
 local hornFilter = pd.sound.twopolefilter.new(pd.sound.kFilterLowPass)
-hornFilter:setFrequency(2600)
-hornFilter:setResonance(0.3)
+hornFilter:setFrequency(4200)
+hornFilter:setResonance(0.15)
 local hornChannel = pd.sound.channel.new()
 hornChannel:addEffect(hornFilter)
-for _, v in ipairs(hornVoices) do hornChannel:addSource(v) end
-
-local function hornBlast(len)
-	for i, v in ipairs(hornVoices) do
-		v:playNote(HORN_FREQS[i], 0.13, len)
+local function hornSet(a, d, s, r)
+	local set = {}
+	for i, def in ipairs(HORN_VOICES) do
+		local v = pd.sound.synth.new(def[2])
+		v:setADSR(a, d, s, r)
+		v:setEnvelopeCurvature(1)
+		hornChannel:addSource(v)
+		set[i] = v
 	end
+	return set
+end
+local hornShort = hornSet(0.008, 0.04, 0.85, 0.05)
+local hornLong = hornSet(0.012, 0.08, 0.9, 0.3)
+for _, v in ipairs(hornLong) do v:setFrequencyMod(hornSag) end
+
+local function hornBlast(set, hz, len)
+	for i, v in ipairs(set) do v:playNote(hz * HORN_VOICES[i][1], HORN_VOICES[i][3], len) end
 end
 
 local function playHorn()
-	hornBlast(0.13)
-	pd.timer.performAfterDelay(190, function() hornBlast(0.13) end)
-	pd.timer.performAfterDelay(380, function() hornBlast(0.9) end)
+	local h = HORN
+	for i = 0, 2 do
+		pd.timer.performAfterDelay(i * h.hitMs, function() hornBlast(hornShort, h.hitHz, 0.1) end)
+	end
+	pd.timer.performAfterDelay(3 * h.hitMs + 30, function()
+		hornSag:setCenter(0)
+		hornBlast(hornLong, h.hz, (h.sagAt + h.sagMs + h.holdMs) / 1000)
+		pd.timer.performAfterDelay(h.sagAt, function()
+			local t = pd.timer.new(h.sagMs, 0, h.sag, pd.easingFunctions.outQuad)
+			-- Frequency mod is in octaves (1 = an octave up), so convert half-steps.
+			t.updateCallback = function(timer) hornSag:setCenter(timer.value / 12) end
+			t.timerEndedCallback = function() hornSag:setCenter(h.sag / 12) end
+		end)
+	end)
 end
 
 -- Sad trombone for natural 1s: wah wah wah waaaaah, muted brass with a wobble.

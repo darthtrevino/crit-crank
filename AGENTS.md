@@ -13,7 +13,7 @@ Guidance for AI coding agents working on Crit Crank. Read this before you change
   - `characters.lua` has the prebuilt heroes; `importer.lua` takes in heroes from charsync.
   - `launcher/` holds the 1-bit card and icon art.
 - `charsync/`: Rust CLI. `ddb.rs` converts D&D Beyond JSON, `model.rs` is the game's character JSON, `transport.rs` handles USB serial and data-disk, and `main.rs` is the CLI.
-- `site/`: static GitHub Pages site. No build step: plain HTML, CSS and JS. `demo.js` is a browser imitation of the game.
+- `site/`: static GitHub Pages site. No build step: plain HTML, CSS and ES modules. `sim/*.js` is a JavaScript port of the game (one module per Lua file) that draws 1-bit onto a 400×240 canvas; keep it in step with game behavior changes. `docs.html` is the full manual.
 
 ## Commands
 
@@ -45,7 +45,7 @@ CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on
 
 ## Working with the user's hardware
 
-See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`.
+See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`, `sound-design` (Simulator auditions and a slider tuner for sounds).
 
 - **One session at a time on the Simulator.** Take the lock with `.github/skills/playdate-simulator/scripts/simlock.sh acquire` before `make run`, and release it when done. If it's busy, don't launch or kill the Simulator.
 

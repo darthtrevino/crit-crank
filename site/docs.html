@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Manual · Crit Crank</title>
+	<meta name="description" content="The Crit Crank manual: controls, rolling, resources, rests, death saves, dice pools, the pause screen and importing D&amp;D Beyond characters.">
+	<meta property="og:title" content="Crit Crank manual">
+	<meta property="og:description" content="Everything Crit Crank does, page by page.">
+	<meta property="og:image" content="assets/card.png">
+	<meta name="theme-color" content="#ffc500">
+	<link rel="icon" href="assets/icon.png">
+	<link rel="stylesheet" href="style.css">
+</head>
+<body class="docs-page">
+	<a class="skip" href="#main">Skip to content</a>
+	<header class="topbar">
+		<a class="brand" href="index.html"><img class="pixel" src="assets/icon.png" width="32" height="32" alt=""> Crit Crank</a>
+		<nav aria-label="Site">
+			<a href="index.html#demo-title">Try it</a>
+			<a href="docs.html" aria-current="page">Manual</a>
+			<a href="https://github.com/darthtrevino/crit-crank">GitHub</a>
+		</nav>
+	</header>
+
+	<div class="docs">
+		<nav class="toc" aria-label="Manual contents">
+			<p class="toc-title">Contents</p>
+			<ol>
+				<li><a href="#install">Install</a></li>
+				<li><a href="#screen">The screen</a></li>
+				<li><a href="#controls">Controls</a></li>
+				<li><a href="#rolling">Rolling dice</a></li>
+				<li><a href="#pages">The six pages</a></li>
+				<li><a href="#resources">HP, slots and uses</a></li>
+				<li><a href="#rests">Crank to rest</a></li>
+				<li><a href="#dying">Dying and death saves</a></li>
+				<li><a href="#pool">Dice pools</a></li>
+				<li><a href="#pause">Pause screen and Rules</a></li>
+				<li><a href="#heroes">Heroes</a></li>
+				<li><a href="#import">Import from D&amp;D Beyond</a></li>
+				<li><a href="#rules">Rules reference</a></li>
+				<li><a href="#web">The browser demo</a></li>
+			</ol>
+		</nav>
+
+		<main id="main" class="manual">
+			<h1>Crit Crank manual</h1>
+			<p class="lede">Crit Crank is a D&amp;D&nbsp;5e character sheet for the Playdate. Every number on your sheet is a button: select it and turn the crank to roll real 3D dice. This page covers everything the game does.</p>
+
+			<section id="install">
+				<h2>Install</h2>
+				<ol>
+					<li>Download <a href="https://github.com/darthtrevino/crit-crank/releases/latest/download/crit-crank.pdx.zip">crit-crank.pdx.zip</a>.</li>
+					<li>Sideload it at <a href="https://play.date/account/sideload/">play.date/account/sideload</a>. Or unzip it, put your Playdate in USB disk mode and copy <code>charsheet.pdx</code> into the <code>Games</code> folder.</li>
+					<li>To build it yourself, install the <a href="https://play.date/dev/">Playdate SDK</a> and run <code>cd charsheet &amp;&amp; make run</code>.</li>
+				</ol>
+				<p>Crit Crank shows up on your Playdate as <b>Crit Crank</b>. Your HP, slots, dice pool and selected row are saved automatically.</p>
+			</section>
+
+			<section id="screen">
+				<h2>The screen</h2>
+				<figure class="shot">
+					<img class="pixel" src="assets/abilities.png" width="400" height="240" alt="The Ability page, with the header, tabs, list, dice tray and footer">
+				</figure>
+				<dl class="parts">
+					<dt>Header</dt><dd>Your hero's name, level and class, then AC, current/max HP and speed.</dd>
+					<dt>Tabs</dt><dd>The six pages. The current one is highlighted.</dd>
+					<dt>List</dt><dd>The rows on this page. The black bar is your selection. Rows with an <code>└</code> belong to the row above, such as an attack's damage.</dd>
+					<dt>Dice tray</dt><dd>The right-hand panel shows what the selected row will roll, the dice themselves and then the result.</dd>
+					<dt>Footer</dt><dd>A reminder of the controls for the selected row, and the d20 mode (normal, advantage or disadvantage). Messages such as <i>Used 1st-level slot (3 left)</i> appear here too.</dd>
+				</dl>
+			</section>
+
+			<section id="controls">
+				<h2>Controls</h2>
+				<div class="table-wrap">
+				<table>
+					<thead><tr><th scope="col">Input</th><th scope="col">What it does</th></tr></thead>
+					<tbody>
+						<tr><td>⬅️ ➡️</td><td>Change page: Ability, Saves, Skills, Actions, Status, Dice.</td></tr>
+						<tr><td>⬆️ ⬇️</td><td>Select a row. Hold to repeat.</td></tr>
+						<tr><td>Crank</td><td>Turn to pick up and spin the dice. The faster you crank, the faster they spin. Stop and they land.</td></tr>
+						<tr><td>Ⓐ</td><td>Quick roll, for when the crank is docked.</td></tr>
+						<tr><td>Ⓑ</td><td>Cycle the next d20 roll: normal → advantage → disadvantage.</td></tr>
+						<tr><td>Crank, Ⓐ or Ⓑ on a counter</td><td>On a Status counter or a dice-pool row: crank clockwise to go up, Ⓐ for −1, Ⓑ for +1.</td></tr>
+						<tr><td>Crank on a rest</td><td>Take a short or long rest. See <a href="#rests">Crank to rest</a>.</td></tr>
+						<tr><td>Menu</td><td>Pause. The left half explains the selected row. Choose <b>Hero</b> to switch characters or <b>Rules</b> for the full text.</td></tr>
+					</tbody>
+				</table>
+				</div>
+			</section>
+
+			<section id="rolling">
+				<h2>Rolling dice</h2>
+				<figure class="shot float">
+					<img class="pixel" src="assets/nat20.gif" width="400" height="240" alt="A d20 tumbling and landing on a natural 20">
+				</figure>
+				<p>Select any row with a bonus or damage and turn the crank. After a short wind-up the dice leap up and tumble for as long as you keep cranking. Stop, and they land a moment later. The tray shows the total and how it adds up, for example <code>13 + 5</code>.</p>
+				<p>No crank? Press Ⓐ for a quick roll. When the crank is docked the tray says <i>Press Ⓐ to roll</i>.</p>
+				<h3>Advantage and disadvantage</h3>
+				<p>Press Ⓑ before a d20 roll to cycle <b>ADVANTAGE</b> (roll two d20s, keep the higher) and <b>DISADVANTAGE</b> (keep the lower). The tray labels the roll and shows both dice; the one that doesn't count is drawn hollow. The mode goes back to normal after each d20 roll.</p>
+				<h3>Critical hits</h3>
+				<p>Roll a 20 on an attack and the next damage roll is marked <b>CRITICAL x2</b>: its damage dice are doubled. The crit stays ready until your next d20 roll, so you can roll several damage types. Some heroes crit on a lower number, like Brenna the Champion on 19–20.</p>
+				<p>A natural 20 plays a DJ air horn and a natural 1 plays a sad trombone. Dice-pool rolls stay quiet.</p>
+			</section>
+
+			<section id="pages">
+				<h2>The six pages</h2>
+				<dl class="parts">
+					<dt>Ability</dt><dd>The six ability checks with their scores, then Initiative, Proficiency Bonus and Passive Perception. Spellcasters also get Spell Save DC and Spell Attack.</dd>
+					<dt>Saves</dt><dd>Saving throws. ● marks proficiency.</dd>
+					<dt>Skills</dt><dd>All 18 skills. ● is proficient and ◉ is expertise (double proficiency).</dd>
+					<dt>Actions</dt><dd>Weapons and spells in sections, each with an attack roll followed by its damage. Healing spells and features such as Second Wind are here too, and features that don't roll are listed with their details.</dd>
+					<dt>Status</dt><dd>HP, Hit Dice with a Spend Hit Die roll, spell slots and limited-use features, plus the Short Rest and Long Rest rows. At 0 HP a Dying section appears at the top.</dd>
+					<dt>Dice</dt><dd>Build a custom pool, or use the quick rolls: d4 to d100, 2d6, 4d6 drop lowest and 8d6.</dd>
+				</dl>
+				<div class="shots">
+					<figure class="shot"><img class="pixel" src="assets/skills.png" width="400" height="240" alt="Skills page with proficiency and expertise marks"><figcaption>Skills</figcaption></figure>
+					<figure class="shot"><img class="pixel" src="assets/actions.png" width="400" height="240" alt="Actions page with weapons and features"><figcaption>Actions</figcaption></figure>
+				</div>
+			</section>
+
+			<section id="resources">
+				<h2>HP, slots and uses</h2>
+				<figure class="shot float">
+					<img class="pixel" src="assets/status.png" width="400" height="240" alt="Status page with hit points, hit dice and spell slots">
+				</figure>
+				<p>Select a counter on the Status page and turn the crank to change it: clockwise to go up, counter-clockwise to go down. Ⓐ takes one off and Ⓑ adds one. Hold either button to keep counting. Use it to take damage, heal or mark a spell slot used.</p>
+				<p>Most of the time you won't need to. Rolling a spell spends a slot of its level, and rolling a limited feature spends a use. An attack and its damage count as one cast, so the slot is spent once. If you have none left, the footer warns you but the roll still happens.</p>
+				<p>Second Wind and <b>Spend Hit Die</b> heal you when the dice land. Spend Hit Die needs a Hit Die left and some missing HP.</p>
+			</section>
+
+			<section id="rests">
+				<h2>Crank to rest</h2>
+				<figure class="shot float">
+					<img class="pixel" src="assets/rest.gif" width="400" height="240" alt="Cranking on Long Rest: the progress bar fills, drains when the crank stops, then fills to RESTED and HP returns to full">
+				</figure>
+				<p>Resting is the one thing you can't do by accident. Go to the Status page, select <b>Short Rest</b> or <b>Long Rest</b> and keep turning the crank:</p>
+				<ol>
+					<li>A bar fills in the tray as you crank. It clicks every quarter turn, rising in pitch.</li>
+					<li>Two full turns (720°) complete the rest. A chime plays, the tray shows <b>RESTED</b>, and the footer says what came back.</li>
+					<li>If you stop early, the bar drains away and nothing happens.</li>
+					<li>After a rest the crank is locked until you let go of it for half a second, so you can't take two rests in a row by accident.</li>
+				</ol>
+				<p>Pressing Ⓐ or Ⓑ on a rest only shows a reminder to crank. If the crank is docked, the tray asks you to undock it.</p>
+				<div class="table-wrap">
+				<table>
+					<thead><tr><th scope="col">Rest</th><th scope="col">What comes back</th></tr></thead>
+					<tbody>
+						<tr><td>Short Rest (1 hour)</td><td>Features that recharge on a short rest, such as Second Wind, Action Surge and Channel Divinity. Then spend Hit Dice on the Status page to heal.</td></tr>
+						<tr><td>Long Rest (8 hours)</td><td>All HP, every spell slot and feature, and half your total Hit Dice (at least 1). Death saves and a pending crit are cleared.</td></tr>
+					</tbody>
+				</table>
+				</div>
+				<p><a class="btn small" href="index.html#try=STATUS|Long%20Rest">Try crank-to-rest in the browser</a></p>
+			</section>
+
+			<section id="dying">
+				<h2>Dying and death saves</h2>
+				<p>At 0 HP the Status page opens with a <b>Dying</b> section: a <b>Death Save</b> roll and counters for successes and failures. Roll it and the game counts the result for you:</p>
+				<ul>
+					<li>10 or higher is a success; lower is a failure.</li>
+					<li>A natural 1 counts as two failures.</li>
+					<li>A natural 20 brings you back with 1 HP.</li>
+					<li>Three successes and you're stable. Three failures, and the footer tells you the bad news.</li>
+				</ul>
+				<p>Any healing, or a long rest, clears the death saves and hides the Dying section.</p>
+			</section>
+
+			<section id="pool">
+				<h2>Dice pools</h2>
+				<figure class="shot float">
+					<img class="pixel" src="assets/pool_roll.png" width="400" height="240" alt="A 2d6+1d4+2 pool rolled for 13">
+				</figure>
+				<p>On the Dice page, <b>Build a pool</b> lists a row for each die from d4 to d20 and a <b>Modifier</b>. Select one and crank, or press Ⓐ/Ⓑ, to change how many. The tray previews the whole pool.</p>
+				<p>Then select <b>Roll pool</b> and crank to roll it all at once, for example <code>2d6+1d4+2</code>. A pool holds up to 12 dice and a modifier of ±20. Press Ⓑ on Roll pool to clear it. Each hero keeps their own pool.</p>
+			</section>
+
+			<section id="pause">
+				<h2>Pause screen and Rules</h2>
+				<div class="pause-row">
+					<div class="pause"><img class="pixel" src="assets/pause_dex.png" width="200" height="240" alt="Pause card for Dexterity"><ul class="sysmenu" aria-hidden="true"><li>hero</li><li>rules</li><li class="sep">volume</li><li>home</li></ul></div>
+				</div>
+				<p>Press Menu and the left half of the pause screen explains the selected row: what the ability, save, skill, spell, feature or resource does, and how its bonus adds up, for example <code>+5 = STR +3, prof +2</code>.</p>
+				<p>For longer text, choose <b>Rules</b> in the menu. A full-screen viewer slides up with the whole description. Crank or use ⬆️⬇️ to scroll, Ⓐ to page down (and close at the end), and Ⓑ to close.</p>
+			</section>
+
+			<section id="heroes">
+				<h2>Heroes</h2>
+				<p>Crit Crank comes with four level-3 heroes: Brenna Stoutheart (fighter), Elowen Starwhisper (wizard), Pip Thistlefoot (halfling rogue) and Brother Aldric (cleric). Switch with <b>Menu → Hero</b>.</p>
+				<p>Each hero remembers their page, selected row, d20 mode, pending crit, last spell cast and dice pool, along with their HP and resources.</p>
+			</section>
+
+			<section id="import">
+				<h2>Import from D&amp;D Beyond</h2>
+				<p><b>charsync</b> is a command-line tool for macOS, Windows and Linux. It downloads a <em>public</em> D&amp;D Beyond character, converts it and sends it to your Playdate over USB while Crit Crank is running:</p>
+<pre><code>cd charsync
+cargo install --path .
+charsync import https://www.dndbeyond.com/characters/12345678</code></pre>
+				<p>It converts ability scores, saves, skills, HP, AC, spell slots, weapons, damage and healing spells, and limited-use features. Spell and feature descriptions show up on the pause screen and in the Rules viewer. The new hero is selected straight away. Importing the same character again updates it and keeps its current HP, slots and uses.</p>
+				<p>The <a href="https://github.com/darthtrevino/crit-crank/tree/main/charsync">charsync README</a> covers the Simulator, USB disk mode and removing a hero.</p>
+			</section>
+
+			<section id="rules">
+				<h2>Rules reference</h2>
+				<ul>
+					<li>Ability checks, saving throws, skills, initiative and death saves are d20 + bonus.</li>
+					<li>Attacks roll to hit, then roll damage separately.</li>
+					<li>Advantage and disadvantage reset after each d20 roll.</li>
+					<li>A critical hit doubles the damage dice of the following damage rolls until the next d20 roll.</li>
+					<li>Halfling Lucky (Pip) automatically rerolls natural 1s on d20 rolls.</li>
+					<li>Spells spend a slot of their level; limited features spend a use. Multi-roll actions spend once per cast.</li>
+				</ul>
+				<p>Rule summaries are paraphrased from the 5e System Reference Document.</p>
+			</section>
+
+			<section id="web">
+				<h2>The browser demo</h2>
+				<p>The <a href="index.html#demo-title">demo on the home page</a> is the game's code ported to JavaScript, so it behaves like the Playdate. On a computer:</p>
+				<div class="table-wrap">
+				<table>
+					<thead><tr><th scope="col">Playdate</th><th scope="col">Mouse or keyboard</th></tr></thead>
+					<tbody>
+						<tr><td>Crank</td><td>Drag the crank handle in a circle, scroll over the screen, or hold <kbd>[</kbd> / <kbd>]</kbd></td></tr>
+						<tr><td>D-pad</td><td>Arrow keys or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td></tr>
+						<tr><td>Ⓐ</td><td><kbd>X</kbd> or <kbd>Enter</kbd></td></tr>
+						<tr><td>Ⓑ</td><td><kbd>Z</kbd> or <kbd>Backspace</kbd></td></tr>
+						<tr><td>Menu</td><td><kbd>Esc</kbd> or <kbd>M</kbd></td></tr>
+					</tbody>
+				</table>
+				</div>
+				<p>The demo saves to your browser's local storage. It uses system fonts because the Playdate's fonts are licensed for Playdate games only.</p>
+			</section>
+		</main>
+	</div>
+
+	<footer>
+		<p>Crit Crank is a fan project. It is not affiliated with Panic, Wizards of the Coast or D&amp;D Beyond. Rule summaries are paraphrased from the 5e System Reference Document.</p>
+	</footer>
+</body>
+</html>
