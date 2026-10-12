@@ -45,7 +45,9 @@ CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on
 
 ## Working with the user's hardware
 
-See the skills in `.github/skills/`: `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`.
+See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`.
+
+- **One session at a time on the Simulator.** Take the lock with `.github/skills/playdate-simulator/scripts/simlock.sh acquire` before `make run`, and release it when done. If it's busy, don't launch or kill the Simulator.
 
 - **Never screenshot the user's desktop.** Capture the Simulator's framebuffer from Lua, or the device over serial.
 - The Simulator and `pdutil` hold the serial port, so close them before using charsync or serial scripts.
