@@ -29,7 +29,7 @@ cd charsheet
 make run          # build with pdc and open in the Simulator
 ```
 
-To play on hardware, download `crit-crank.pdx.zip` from the [site](https://darthtrevino.github.io/crit-crank/) or a CI run, and sideload it at [play.date/account/sideload](https://play.date/account/sideload/).
+To play on hardware, download `crit-crank.pdx.zip` from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest), and sideload it at [play.date/account/sideload](https://play.date/account/sideload/).
 
 To bring in a D&D Beyond character (it must be set to Public):
 
@@ -56,7 +56,15 @@ charsheet/tools/lint.sh
 (cd site && python3 -m http.server)
 ```
 
-CI runs all of these on every pull request and push to `main`. Pushes to `main` also rebuild the game and deploy the site to GitHub Pages.
+CI runs all of these on every pull request and push to `main`. Changes under `site/` on `main` redeploy GitHub Pages.
+
+### Releasing
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+The Release workflow sets `version` in `pdxinfo` from the tag, builds the game, and publishes a GitHub Release with `crit-crank.pdx.zip` attached. The site's download button always points at the latest release.
 
 ## License
 
