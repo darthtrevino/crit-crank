@@ -63,8 +63,10 @@ on the device too.
 - ADSR is per synth. For blasts of different shapes (short hits and a long
   tail), make a separate set of synths per shape instead of re-setting ADSR.
 - Pitch bends: `synth:setFrequencyMod(lfo)` with `lfo:setDepth(0)`, then move
-  `lfo:setCenter(halfSteps)` from a `pd.timer` (use `pd.easingFunctions` for
-  curves). Half-steps from a ratio: `12 * log2(ratio)`.
+  `lfo:setCenter(halfSteps / 12)` from a `pd.timer` (use `pd.easingFunctions`
+  for curves). **The frequency-mod signal is in octaves** (1 = an octave up,
+  -1 = an octave down), not half-steps: forgetting the `/ 12` sends a 4
+  half-step drop down 4 octaves. Octaves from a ratio: `log2(ratio)`.
 - Timing: `pd.timer.performAfterDelay(ms, fn)`.
 - Effects go on a `pd.sound.channel`: `twopolefilter` (low-pass to tame fizz,
   high-pass to thin out), `overdrive` (grit, but harsh on the small speaker).

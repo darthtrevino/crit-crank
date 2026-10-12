@@ -135,8 +135,9 @@ local function playHorn()
 		hornBlast(hornLong, h.hz, (h.sagAt + h.sagMs + h.holdMs) / 1000)
 		pd.timer.performAfterDelay(h.sagAt, function()
 			local t = pd.timer.new(h.sagMs, 0, h.sag, pd.easingFunctions.outQuad)
-			t.updateCallback = function(timer) hornSag:setCenter(timer.value) end
-			t.timerEndedCallback = function() hornSag:setCenter(h.sag) end
+			-- Frequency mod is in octaves (1 = an octave up), so convert half-steps.
+			t.updateCallback = function(timer) hornSag:setCenter(timer.value / 12) end
+			t.timerEndedCallback = function() hornSag:setCenter(h.sag / 12) end
 		end)
 	end)
 end
