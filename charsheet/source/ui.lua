@@ -302,10 +302,20 @@ function UI.drawTray(t)
 		return
 	end
 
+	if row.kind == "trait" then
+		if row.value then drawText(fonts.body, row.value, TRAY_CX, y + 18, "center") end
+		if t.blurb then
+			gfx.setFont(fonts.small)
+			gfx.drawTextInRect(t.blurb, UI.TRAY_X + 4, y + 42, TRAY_W, 108, nil, "…", kTextAlignment.center)
+		end
+		drawText(fonts.small, "Ⓐ read more", TRAY_CX, y + 158, "center")
+		return
+	end
+
 	if row.kind == "rest" then
 		drawText(fonts.small, row.detail, TRAY_CX, y + 16, "center")
 		local lines = row.key == "long"
-			and { "Full HP, spell slots", "and features, half", "your Hit Dice back" }
+			and { "Full HP, spell slots,", "features, half your", "Hit Dice; -1 Exhaustion" }
 			or { "Recharge short-rest", "features, then spend", "Hit Dice to heal" }
 		for i, l in ipairs(lines) do
 			drawText(fonts.small, l, TRAY_CX, y + 38 + (i - 1) * 15, "center")
@@ -411,6 +421,11 @@ function UI.drawFooter(mode, toast)
 	end
 	if mode == "rest" then
 		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 crank to rest", 6, UI.FOOTER_Y + 2)
+		return
+	end
+	if mode == "trait" then
+		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select", 6, UI.FOOTER_Y + 2)
+		drawText(fonts.small, "Ⓐ details", UI.W - 6, UI.FOOTER_Y + 2, "right")
 		return
 	end
 	if mode == "resource" then

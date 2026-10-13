@@ -1,12 +1,20 @@
--- Per-character tracked resources: HP, hit dice, spell slots, feature uses.
+-- Per-character tracked resources: HP, hit dice, conditions, spell slots, feature uses.
 --
 -- State is a flat table keyed by resource id:
---   hp, hitDice, deathSaves, deathFails, slot1..slotN, and each feature id.
+--   hp, hitDice, deathSaves, deathFails, inspiration, exhaustion,
+--   slot1..slotN, and each feature id.
 
 Resources = {}
 
 -- Death save counters start empty instead of full.
 local DEATH <const> = { deathSaves = "Death save successes", deathFails = "Death save failures" }
+
+-- Conditions also start empty: { max, label }.
+local CONDITION <const> = {
+	inspiration = { 1, "Heroic Inspiration" },
+	exhaustion = { 6, "Exhaustion" },
+}
+Resources.RESERVED = { hp = true, hitDice = true, deathSaves = true, deathFails = true, inspiration = true, exhaustion = true }
 
 local function featureById(c, id)
 	for _, f in ipairs(c.features or {}) do
@@ -18,6 +26,7 @@ function Resources.max(c, key)
 	if key == "hp" then return c.hp end
 	if key == "hitDice" then return c.level end
 	if DEATH[key] then return 3 end
+	if CONDITION[key] then return CONDITION[key][1] end
 	local lvl = key:match("^slot(%d+)$")
 	if lvl then return (c.slots or {})[tonumber(lvl)] or 0 end
 	local f = featureById(c, key)
@@ -28,6 +37,7 @@ function Resources.label(c, key)
 	if key == "hp" then return "Hit Points" end
 	if key == "hitDice" then return "Hit Dice" end
 	if DEATH[key] then return DEATH[key] end
+	if CONDITION[key] then return CONDITION[key][2] end
 	local lvl = key:match("^slot(%d+)$")
 	if lvl then return "Level " .. lvl .. " slot" end
 	local f = featureById(c, key)
@@ -35,7 +45,7 @@ function Resources.label(c, key)
 end
 
 function Resources.keys(c)
-	local keys = { "hp", "hitDice", "deathSaves", "deathFails" }
+	local keys = { "hp", "hitDice", "deathSaves", "deathFails", "inspiration", "exhaustion" }
 	for lvl in ipairs(c.slots or {}) do keys[#keys + 1] = "slot" .. lvl end
 	for _, f in ipairs(c.features or {}) do keys[#keys + 1] = f.id end
 	return keys
@@ -43,7 +53,7 @@ end
 
 function Resources.fresh(c)
 	local r = {}
-	for _, k in ipairs(Resources.keys(c)) do r[k] = DEATH[k] and 0 or Resources.max(c, k) end
+	for _, k in ipairs(Resources.keys(c)) do r[k] = (DEATH[k] or CONDITION[k]) and 0 or Resources.max(c, k) end
 	return r
 end
 
@@ -118,13 +128,15 @@ function Resources.shortRest(c, r)
 	return restored
 end
 
--- Long rest: full HP, all slots and features, regain half your hit dice (min 1).
+-- Long rest: full HP, all slots and features, regain half your hit dice (min 1),
+-- and one less level of exhaustion. Returns hit dice regained, exhaustion removed.
 function Resources.longRest(c, r)
-	local before = r.hitDice
+	local before, tired = r.hitDice, r.exhaustion
 	r.hp = c.hp
 	Resources.clearDeath(r)
 	r.hitDice = math.min(c.level, r.hitDice + math.max(1, math.floor(c.level / 2)))
 	for lvl, max in ipairs(c.slots or {}) do r["slot" .. lvl] = max end
 	for _, f in ipairs(c.features or {}) do r[f.id] = f.max end
-	return r.hitDice - before
+	r.exhaustion = math.max(0, tired - 1)
+	return r.hitDice - before, tired - r.exhaustion
 end

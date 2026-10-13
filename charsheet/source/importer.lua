@@ -28,6 +28,35 @@ local function str(v, default)
 	return default
 end
 
+local function strings(v)
+	local out = {}
+	for _, s in ipairs(type(v) == "table" and v or {}) do
+		if str(s) then out[#out + 1] = s end
+	end
+	return out
+end
+
+local function ranges(v)
+	local out = {}
+	for k, ft in pairs(type(v) == "table" and v or {}) do
+		if type(k) == "string" and num(ft, 0) > 0 then out[k] = num(ft, 0) end
+	end
+	return out
+end
+
+-- Traits page data; older imports have none.
+local function traits(raw)
+	raw = type(raw) == "table" and raw or {}
+	local t = { speeds = ranges(raw.speeds), senses = ranges(raw.senses) }
+	for _, k in ipairs({
+		"languages", "resistances", "immunities", "vulnerabilities", "conditionImmunities",
+		"armor", "weapons", "tools",
+	}) do
+		t[k] = strings(raw[k])
+	end
+	return t
+end
+
 -- Validates and normalizes a decoded character; returns c or nil, reason.
 function Importer.normalize(raw)
 	if type(raw) ~= "table" then return nil, "not an object" end
@@ -55,6 +84,7 @@ function Importer.normalize(raw)
 		slots = {},
 		features = {},
 		actions = {},
+		traits = traits(raw.traits),
 	}
 	for _, a in ipairs(ABILITIES) do
 		c.abilities[a] = num(raw.abilities[a], 10)
@@ -69,7 +99,7 @@ function Importer.normalize(raw)
 		c.slots[#c.slots + 1] = math.max(0, num(n, 0))
 	end
 	for _, f in ipairs(type(raw.features) == "table" and raw.features or {}) do
-		if type(f) == "table" and str(f.id) and num(f.max, 0) > 0 then
+		if type(f) == "table" and str(f.id) and not Resources.RESERVED[f.id] and num(f.max, 0) > 0 then
 			c.features[#c.features + 1] = {
 				id = f.id, name = str(f.name, f.id), max = num(f.max, 1),
 				reset = f.reset == "short" and "short" or "long", rule = str(f.rule),

@@ -174,7 +174,8 @@ local function currentPage()
 end
 
 local function isSelectable(row)
-	return row and (row.kind == "roll" or row.kind == "resource" or row.kind == "counter" or row.kind == "rest")
+	return row and (row.kind == "roll" or row.kind == "resource" or row.kind == "counter" or row.kind == "rest"
+		or row.kind == "trait")
 end
 
 local function firstSelectable(rows)
@@ -270,6 +271,7 @@ local function adjustResource(key, delta)
 		state.dirty = true
 		tickSynth:playNote(delta > 0 and 900 or 500, 0.1, 0.02)
 		if key == "hp" then syncDying() end
+		if key == "exhaustion" and after == 6 then toast("Exhaustion 6: you die") end
 	end
 end
 
@@ -725,8 +727,19 @@ local function resourceRow()
 	if row and (row.kind == "resource" or row.kind == "counter") then return row end
 end
 
+local openRules
+
+local function traitRow()
+	local row = selectedRow()
+	return row and row.kind == "trait"
+end
+
 function pd.AButtonDown()
 	if diceMoving() or restHint() then return end
+	if traitRow() then
+		openRules()
+		return
+	end
 	local r = resourceRow()
 	if r then
 		holdRepeat("a", function() adjustRow(r, -1) end)
@@ -737,7 +750,7 @@ end
 function pd.AButtonUp() release("a") end
 
 function pd.BButtonDown()
-	if diceMoving() or restHint() then return end
+	if diceMoving() or restHint() or traitRow() then return end
 	local r = resourceRow()
 	if r then
 		holdRepeat("b", function() adjustRow(r, 1) end)
@@ -797,7 +810,7 @@ local rulesInput = {
 	BButtonDown = closeRules,
 }
 
-local function openRules()
+function openRules()
 	local d = Rules.describe(character(), selectedRow(), currentPage())
 	local img, height = UI.renderRuleBody(Rules.plain(d.body or ""))
 	for key in pairs(repeatTimers) do release(key) end
@@ -917,11 +930,11 @@ local function shortRest()
 end
 
 local function longRest()
-	local regained = Resources.longRest(character(), state.res)
+	local regained, rested = Resources.longRest(character(), state.res)
 	state.lastCast = nil
 	state.critPending = false
 	syncDying()
-	toast("Long rest: fully restored, +" .. regained .. " Hit Dice")
+	toast("Long rest: fully restored, +" .. regained .. " Hit Dice" .. (rested > 0 and ", -1 Exhaustion" or ""))
 	save()
 end
 
@@ -1014,6 +1027,11 @@ function pd.update()
 	if row and row.kind == "roll" and not (row.pool and #row.spec.terms == 0) then
 		tray.spec = effectiveSpec(row)
 		tray.preview = previewFor(row)
+	elseif row and row.kind == "trait" then
+		if not row.blurb then
+			row.blurb = Rules.plain(Rules.describe(c, row, page).body or "")
+		end
+		tray.blurb = row.blurb
 	elseif row and row.kind == "counter" then
 		local poolRow
 		for _, r in ipairs(page.rows) do if r.pool then poolRow = r end end
@@ -1028,6 +1046,8 @@ function pd.update()
 		footerMode = "resource"
 	elseif row and row.kind == "rest" then
 		footerMode = "rest"
+	elseif row and row.kind == "trait" then
+		footerMode = "trait"
 	elseif row and row.pool then
 		footerMode = "pool"
 	elseif row and row.spec and not row.spec.check then

@@ -19,6 +19,10 @@
 --
 -- hitDie: hit die size; slots: spell slots per level;
 -- features: limited-use features restored by a "short" or "long" rest.
+-- traits (TRAITS page, all optional):
+--   speeds = { fly, swim, climb, burrow }, senses = { darkvision, blindsight,
+--   tremorsense, truesight } in feet; languages, resistances, immunities,
+--   vulnerabilities, conditionImmunities, armor, weapons, tools: lists of names.
 
 Characters = {
 	{
@@ -31,6 +35,14 @@ Characters = {
 		saves = { "str", "con" },
 		skills = { athletics = 1, intimidation = 1, perception = 1, survival = 1 },
 		critRange = 19, -- Champion: Improved Critical
+		traits = {
+			senses = { darkvision = 60 },
+			languages = { "Common", "Dwarvish" },
+			resistances = { "Poison" },
+			armor = { "Light armor", "Medium armor", "Heavy armor", "Shields" },
+			weapons = { "Simple weapons", "Martial weapons" },
+			tools = { "Smith's tools" },
+		},
 		hitDie = 10,
 		features = {
 			{ id = "secondWind", name = "Second Wind", max = 1, reset = "short", rule = "Bonus action: catch your breath and regain 1d10 + fighter level hit points." },
@@ -53,6 +65,14 @@ Characters = {
 		abilities = { str = 8, dex = 16, con = 13, int = 16, wis = 12, cha = 10 },
 		saves = { "int", "wis" },
 		skills = { arcana = 1, history = 1, investigation = 1, insight = 1, perception = 1 },
+		traits = {
+			senses = { darkvision = 60 },
+			languages = { "Common", "Elvish", "Draconic", "Sylvan" },
+			weapons = {
+				"Daggers", "Darts", "Slings", "Quarterstaffs", "Light crossbows",
+				"Longswords", "Shortswords", "Shortbows", "Longbows",
+			},
+		},
 		spellAbility = "int",
 		hitDie = 6,
 		slots = { 4, 2 },
@@ -85,6 +105,12 @@ Characters = {
 			perception = 2, sleightOfHand = 1, stealth = 2,
 		},
 		lucky = true, -- Halfling Lucky: reroll natural 1s on d20 tests
+		traits = {
+			languages = { "Common", "Halfling", "Thieves' Cant" },
+			armor = { "Light armor" },
+			weapons = { "Simple weapons", "Hand crossbows", "Longswords", "Rapiers", "Shortswords" },
+			tools = { "Thieves' tools" },
+		},
 		hitDie = 8,
 		actions = {
 			{ section = "Weapons" },
@@ -105,6 +131,11 @@ Characters = {
 		abilities = { str = 14, dex = 10, con = 14, int = 10, wis = 16, cha = 12 },
 		saves = { "wis", "cha" },
 		skills = { insight = 1, medicine = 1, persuasion = 1, religion = 1 },
+		traits = {
+			languages = { "Common", "Celestial" },
+			armor = { "Light armor", "Medium armor", "Heavy armor", "Shields" },
+			weapons = { "Simple weapons" },
+		},
 		spellAbility = "wis",
 		hitDie = 8,
 		slots = { 4, 2 },
