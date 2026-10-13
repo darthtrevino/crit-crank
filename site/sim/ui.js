@@ -164,12 +164,15 @@ function drawPill(g, text, cx, y) {
 	g.text(fonts.small, text, cx, y + 1, "center", "white");
 }
 
-// The tray box the dice bounce around in: the whole panel above the hint line.
+// The space the dice rest in: the whole panel above the hint line. While they
+// roll the hint line is hidden and they may roam down to DICE_FLOOR.
 export const DICE_LEFT = TRAY_X + 1;
 export const DICE_RIGHT = W - 3;
 export const DICE_TOP = BODY_Y + 3;
 export const DICE_BOTTOM = FOOTER_Y - 20;
+export const DICE_FLOOR = FOOTER_Y - 1;
 export const DICE_INSET = 2;
+export const DICE_LABEL_H = 15;
 const DIE_REACH = 1.15; // the widest solid (d4) reaches 1.15 r from its centre
 
 // Resting grid for n dice between top and bottom: { r, xs, ys }.
@@ -199,28 +202,41 @@ export function diceLayout(n, top = DICE_TOP, bottom = DICE_BOTTOM) {
 	return { r, xs, ys };
 }
 
-function drawTrayBox(g) {
-	g.setColor("black");
-	g.setDither(0.5, "bayer2");
-	g.drawRoundRect(DICE_LEFT, DICE_TOP, DICE_RIGHT - DICE_LEFT, DICE_BOTTOM - DICE_TOP, 6);
-	g.setColor("black");
+// "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, else null.
+export function modeLabel(spec, mode) {
+	if (!spec || !spec.check) return null;
+	return mode === "adv" ? "ADVANTAGE" : mode === "dis" ? "DISADVANTAGE" : null;
 }
 
-// The result popover drawn over the settled dice.
-function drawResultBox(g, total, note, hot) {
-	const w = TRAY_W - 4, h = note ? 58 : 42;
-	const x = TRAY_CX - w / 2;
-	const y = DICE_TOP + 3;
-	g.setColor("white");
-	g.fillRoundRect(x, y, w, h, 6);
+// Top of the space the dice move in: below the mode label when one is shown.
+export function diceTop(spec, mode) {
+	return modeLabel(spec, mode) ? BODY_Y + DICE_LABEL_H : DICE_TOP;
+}
+
+// The mode label: a bar across the top of the tray panel.
+function drawModeLabel(g, label) {
+	if (!label) return;
 	g.setColor("black");
-	g.drawRoundRect(x, y, w, h, 6);
-	g.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5);
-	g.text(fonts.big, String(total), TRAY_CX, y + 5, "center");
-	if (note) {
-		if (hot) drawPill(g, note, TRAY_CX, y + 38);
-		else g.text(fonts.small, g.fit(fonts.small, note, w - 8), TRAY_CX, y + 39, "center");
+	g.fillRect(TRAY_X - 2, BODY_Y, W - TRAY_X + 2, DICE_LABEL_H);
+	g.text(fonts.small, label, TRAY_CX, BODY_Y + 1, "center", "white");
+}
+
+// The roll result, on the hint line under the tray: the total, then any detail.
+// A crit or fumble draws the line inverted.
+function drawResultLine(g, total, detail, hot, y) {
+	const totalS = String(total);
+	const totalW = g.textW(fonts.title, totalS);
+	const gap = detail ? 6 : 0;
+	if (detail) detail = g.fit(fonts.small, detail, TRAY_W - totalW - gap);
+	const w = totalW + gap + (detail ? g.textW(fonts.small, detail) : 0);
+	const x = TRAY_CX - Math.floor(w / 2);
+	const mode = hot ? "white" : "copy";
+	if (hot) {
+		g.setColor("black");
+		g.fillRoundRect(x - 6, y - 1, w + 12, 18, 8);
 	}
+	g.text(fonts.title, totalS, x, y - 1, "left", mode);
+	if (detail) g.text(fonts.small, detail, x + totalW + gap, y + 2, "left", mode);
 }
 
 // Bodies that have been placed in the tray draw where they are.
@@ -307,33 +323,32 @@ export function drawTray(g, t) {
 		return;
 	}
 	const hintY = DICE_BOTTOM + 2;
-	drawTrayBox(g);
+	const mode = roll ? roll.mode : t.mode;
+	const top = diceTop(spec, mode);
+	drawModeLabel(g, modeLabel(spec, mode));
 	if (!roll) {
-		drawDiceGrid(g, t.preview.dice, t.preview.bodies);
+		drawDiceGrid(g, t.preview.dice, t.preview.bodies, top);
 		g.text(s, t.docked ? "Undock the crank" : "Crank to roll 🎣", TRAY_CX, hintY, "center");
 		return;
 	}
 	if (roll.phase === "tumble") {
-		drawDiceGrid(g, roll.faces, roll.bodies);
-		g.text(s, "rolling...", TRAY_CX, hintY, "center");
+		drawDiceGrid(g, roll.faces, roll.bodies, top);
 		return;
 	}
 	const res = roll.result;
 	if (roll.phase === "landing") {
-		drawDiceGrid(g, res.dice, roll.bodies);
+		drawDiceGrid(g, res.dice, roll.bodies, top);
 		return;
 	}
-	drawDiceGrid(g, res.dice, roll.bodies, undefined, undefined, res);
+	drawDiceGrid(g, res.dice, roll.bodies, top, undefined, res);
 
 	let note;
-	if (res.crit) note = res.natural === 20 ? "NATURAL 20!" : `CRIT! (${res.natural})`;
-	else if (res.fumble) note = "NATURAL 1";
-	else if (res.lucky) note = "Lucky! rerolled a 1";
-	else if (spec.bonus !== 0) note = `${res.total - spec.bonus} ${spec.bonus > 0 ? "+ " : "- "}${Math.abs(spec.bonus)}`;
-	drawResultBox(g, res.total, note, res.crit || res.fumble);
-	if (roll.crit) g.text(s, "CRITICAL x2", TRAY_CX, hintY, "center");
-	else if (spec.check && roll.mode === "adv") g.text(s, "with advantage", TRAY_CX, hintY, "center");
-	else if (spec.check && roll.mode === "dis") g.text(s, "with disadvantage", TRAY_CX, hintY, "center");
+	if (res.crit) note = res.natural === 20 ? "NAT 20!" : `CRIT! (${res.natural})`;
+	else if (res.fumble) note = "NAT 1";
+	else if (res.lucky) note = "Lucky! rerolled 1";
+	else if (spec.bonus !== 0) note = `= ${res.total - spec.bonus} ${spec.bonus > 0 ? "+ " : "- "}${Math.abs(spec.bonus)}`;
+	const detail = roll.crit ? (note ? `${note}  CRIT x2` : "CRIT x2") : note;
+	drawResultLine(g, res.total, detail, res.crit || res.fumble, hintY);
 }
 
 // ------------------------------------------------------------ footer

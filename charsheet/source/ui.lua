@@ -227,12 +227,15 @@ local function drawPill(text, cx, y)
 	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
--- The tray box the dice bounce around in: the whole panel above the hint line.
+-- The space the dice rest in: the whole panel above the hint line. While they
+-- roll the hint line is hidden and they may roam down to DICE_FLOOR.
 UI.DICE_LEFT = UI.TRAY_X + 1
 UI.DICE_RIGHT = UI.W - 3
 UI.DICE_TOP = UI.BODY_Y + 3
 UI.DICE_BOTTOM = UI.FOOTER_Y - 20
+UI.DICE_FLOOR = UI.FOOTER_Y - 1
 UI.DICE_INSET = 2
+UI.DICE_LABEL_H = 15
 local DIE_REACH = 1.15 -- the widest solid (d4) reaches 1.15 r from its centre
 
 -- Resting grid for n dice between top and bottom: radius, then centres.
@@ -266,31 +269,44 @@ function UI.diceLayout(n, top, bottom)
 	return r, xs, ys
 end
 
-local function drawTrayBox()
-	gfx.setColor(gfx.kColorBlack)
-	gfx.setDitherPattern(0.5, gfx.image.kDitherTypeBayer2x2)
-	gfx.drawRoundRect(UI.DICE_LEFT, UI.DICE_TOP, UI.DICE_RIGHT - UI.DICE_LEFT, UI.DICE_BOTTOM - UI.DICE_TOP, 6)
-	gfx.setColor(gfx.kColorBlack)
+-- "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, else nil.
+function UI.modeLabel(spec, mode)
+	if not (spec and spec.check) then return nil end
+	return (mode == "adv" and "ADVANTAGE") or (mode == "dis" and "DISADVANTAGE") or nil
 end
 
--- The result popover, docked to the top of the tray over the settled dice.
-local function drawResultBox(total, note, hot)
-	local w, h = TRAY_W - 4, note and 58 or 42
-	local x = TRAY_CX - w / 2
-	local y = UI.DICE_TOP + 3
-	gfx.setColor(gfx.kColorWhite)
-	gfx.fillRoundRect(x, y, w, h, 6)
+-- Top of the space the dice move in: below the mode label when one is shown.
+function UI.diceTop(spec, mode)
+	return UI.modeLabel(spec, mode) and (UI.BODY_Y + UI.DICE_LABEL_H) or UI.DICE_TOP
+end
+
+-- The mode label: a bar across the top of the tray panel.
+local function drawModeLabel(label)
+	if not label then return end
 	gfx.setColor(gfx.kColorBlack)
-	gfx.drawRoundRect(x, y, w, h, 6)
-	gfx.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5)
-	drawText(fonts.big, tostring(total), TRAY_CX, y + 5, "center")
-	if note then
-		if hot then
-			drawPill(note, TRAY_CX, y + 38)
-		else
-			drawText(fonts.small, fit(fonts.small, note, w - 8), TRAY_CX, y + 39, "center")
-		end
+	gfx.fillRect(UI.TRAY_X - 2, UI.BODY_Y, UI.W - UI.TRAY_X + 2, UI.DICE_LABEL_H)
+	gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+	drawText(fonts.small, label, TRAY_CX, UI.BODY_Y + 1, "center")
+	gfx.setImageDrawMode(gfx.kDrawModeCopy)
+end
+
+-- The roll result, on the hint line under the tray: the total, then any detail.
+-- A crit or fumble draws the line inverted.
+local function drawResultLine(total, detail, hot, y)
+	local totalS = tostring(total)
+	local totalW = textW(fonts.title, totalS)
+	local gap = detail and 6 or 0
+	if detail then detail = fit(fonts.small, detail, TRAY_W - totalW - gap) end
+	local w = totalW + gap + (detail and textW(fonts.small, detail) or 0)
+	local x = TRAY_CX - math.floor(w / 2)
+	if hot then
+		gfx.setColor(gfx.kColorBlack)
+		gfx.fillRoundRect(x - 6, y - 1, w + 12, 18, 8)
+		gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
 	end
+	drawText(fonts.title, totalS, x, y - 1)
+	if detail then drawText(fonts.small, detail, x + totalW + gap, y + 2) end
+	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
 -- dice: list of { sides, value, kept }; bodies: matching Dice3D bodies.
@@ -399,45 +415,41 @@ function UI.drawTray(t)
 		return
 	end
 	local hintY = UI.DICE_BOTTOM + 2
-	drawTrayBox()
+	local mode = roll and roll.mode or t.mode
+	local diceTop = UI.diceTop(spec, mode)
+	drawModeLabel(UI.modeLabel(spec, mode))
 	if not roll then
-		drawDiceGrid(t.preview.dice, t.preview.bodies)
+		drawDiceGrid(t.preview.dice, t.preview.bodies, diceTop)
 		local hint = playdate.isCrankDocked() and "Undock the crank" or "Crank to roll 🎣"
 		drawText(fonts.small, hint, TRAY_CX, hintY, "center")
 		return
 	end
 
 	if roll.phase == "tumble" then
-		drawDiceGrid(roll.faces, roll.bodies)
-		drawText(fonts.small, "rolling...", TRAY_CX, hintY, "center")
+		drawDiceGrid(roll.faces, roll.bodies, diceTop)
 		return
 	end
 
 	local res = roll.result
 	if roll.phase == "landing" then
-		drawDiceGrid(res.dice, roll.bodies)
+		drawDiceGrid(res.dice, roll.bodies, diceTop)
 		return
 	end
-	drawDiceGrid(res.dice, roll.bodies, nil, nil, res)
+	drawDiceGrid(res.dice, roll.bodies, diceTop, nil, res)
 
 	local note
 	if res.crit then
-		note = (res.natural == 20) and "NATURAL 20!" or ("CRIT! (" .. res.natural .. ")")
+		note = (res.natural == 20) and "NAT 20!" or ("CRIT! (" .. res.natural .. ")")
 	elseif res.fumble then
-		note = "NATURAL 1"
+		note = "NAT 1"
 	elseif res.lucky then
-		note = "Lucky! rerolled a 1"
+		note = "Lucky! rerolled 1"
 	elseif spec.bonus ~= 0 then
-		note = tostring(res.total - spec.bonus) .. " " .. (spec.bonus > 0 and "+ " or "- ") .. math.abs(spec.bonus)
+		note = "= " .. tostring(res.total - spec.bonus) .. " " .. (spec.bonus > 0 and "+ " or "- ") .. math.abs(spec.bonus)
 	end
-	drawResultBox(res.total, note, res.crit or res.fumble)
-	if roll.crit then
-		drawText(fonts.small, "CRITICAL x2", TRAY_CX, hintY, "center")
-	elseif spec.check and roll.mode == "adv" then
-		drawText(fonts.small, "with advantage", TRAY_CX, hintY, "center")
-	elseif spec.check and roll.mode == "dis" then
-		drawText(fonts.small, "with disadvantage", TRAY_CX, hintY, "center")
-	end
+	local detail = note
+	if roll.crit then detail = note and (note .. "  CRIT x2") or "CRIT x2" end
+	drawResultLine(res.total, detail, res.crit or res.fumble, hintY)
 end
 
 ---------------------------------------------------------------- footer
