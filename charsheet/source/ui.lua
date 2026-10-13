@@ -454,7 +454,7 @@ function UI.drawRuleCard(title, sub, body)
 		h -= 18
 		gfx.fillRect(0, 222, 199, 18)
 		gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
-		drawText(fonts.small, fit(fonts.small, "More: Rules in menu", W), X, 224)
+		drawText(fonts.small, fit(fonts.small, "More: Read Rule in menu", W), X, 224)
 		gfx.setImageDrawMode(gfx.kDrawModeCopy)
 	end
 	gfx.setFont(font)
