@@ -2,3 +2,4 @@ charsheet/*.pdx
 .DS_Store
 charsync/target/
 .impeccable/
+.task/

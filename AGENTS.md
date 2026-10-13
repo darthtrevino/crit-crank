@@ -17,10 +17,13 @@ Guidance for AI coding agents working on Crit Crank. Read this before you change
 
 ## Commands
 
+A root `Taskfile.yml` wraps these (`task check`, `task sim`, `task device`, …; see `task --list`).
+
 | Task | Command |
 | --- | --- |
 | Build game | `cd charsheet && make build` (or `pdc source charsheet.pdx`) |
-| Run in Simulator | `cd charsheet && make run` |
+| Run in Simulator | `cd charsheet && make run` (or `task sim`, which takes the lock) |
+| Deploy to device | `task device` (`charsheet/tools/deploy-device.sh`) |
 | Lua lint | `charsheet/tools/lint.sh` (needs `luacheck` on **Lua 5.4**; it crashes on 5.5. Set `LUACHECK=` to point at the binary) |
 | Rust | `cd charsync && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
 | Site preview | `cd site && python3 -m http.server` |
