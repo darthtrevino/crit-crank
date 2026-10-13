@@ -146,7 +146,9 @@ function solidFor(sides) {
 		verts = scaled(icosaVerts(), 1.0);
 		faces = facesFromNormals(verts, dodecaVerts());
 	}
-	solids[sides] = { verts, faces };
+	// reach: the farthest vertex, so r * reach bounds the drawn silhouette
+	const reach = Math.max(...verts.map((v) => sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])));
+	solids[sides] = { verts, faces, reach };
 	return solids[sides];
 }
 
@@ -223,12 +225,16 @@ export function toss(body, amount) {
 	body.vy += sin(a) * v;
 }
 
+// Collision radius: the draw scale times the solid's farthest vertex.
+const reach = (b) => b.r * solidFor(b.sides).reach;
+
 function clampToBox(b, left, top, right, bottom) {
 	let hit = false;
-	if (b.x < left + b.r) [b.x, b.vx, hit] = [left + b.r, Math.abs(b.vx) * WALL_BOUNCE, true];
-	else if (b.x > right - b.r) [b.x, b.vx, hit] = [right - b.r, -Math.abs(b.vx) * WALL_BOUNCE, true];
-	if (b.y < top + b.r) [b.y, b.vy, hit] = [top + b.r, Math.abs(b.vy) * WALL_BOUNCE, true];
-	else if (b.y > bottom - b.r) [b.y, b.vy, hit] = [bottom - b.r, -Math.abs(b.vy) * WALL_BOUNCE, true];
+	const r = reach(b);
+	if (b.x < left + r) [b.x, b.vx, hit] = [left + r, Math.abs(b.vx) * WALL_BOUNCE, true];
+	else if (b.x > right - r) [b.x, b.vx, hit] = [right - r, -Math.abs(b.vx) * WALL_BOUNCE, true];
+	if (b.y < top + r) [b.y, b.vy, hit] = [top + r, Math.abs(b.vy) * WALL_BOUNCE, true];
+	else if (b.y > bottom - r) [b.y, b.vy, hit] = [bottom - r, -Math.abs(b.vy) * WALL_BOUNCE, true];
 	return hit;
 }
 
@@ -256,40 +262,43 @@ export function step(bodies, left, top, right, bottom) {
 			b.speed = Math.max(b.speed, Math.min(0.9, s / b.r));
 		}
 	}
-	for (let i = 0; i < bodies.length; i++) {
-		const a = bodies[i];
-		for (let j = i + 1; j < bodies.length; j++) {
-			const b = bodies[j];
-			if (a.x == null || b.x == null) continue;
-			const dx = b.x - a.x, dy = b.y - a.y;
-			const min = a.r + b.r;
-			const d2 = dx * dx + dy * dy;
-			if (d2 >= min * min) continue;
-			const d = sqrt(d2);
-			let nx, ny;
-			if (d < 0.01) {
-				const ang = random() * 2 * PI;
-				[nx, ny] = [cos(ang), sin(ang)];
-			} else {
-				[nx, ny] = [dx / d, dy / d];
-			}
-			const push = (min - d) / 2;
-			a.x -= nx * push;
-			a.y -= ny * push;
-			b.x += nx * push;
-			b.y += ny * push;
-			const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
-			if (rel < 0) {
-				const imp = -rel * (1 + WALL_BOUNCE) / 2;
-				a.vx -= imp * nx;
-				a.vy -= imp * ny;
-				b.vx += imp * nx;
-				b.vy += imp * ny;
-				if (-rel > 2) clack = true;
+	// a few passes so crowded dice fully separate
+	for (let pass = 0; pass < 3; pass++) {
+		for (let i = 0; i < bodies.length; i++) {
+			const a = bodies[i];
+			for (let j = i + 1; j < bodies.length; j++) {
+				const b = bodies[j];
+				if (a.x == null || b.x == null) continue;
+				const dx = b.x - a.x, dy = b.y - a.y;
+				const min = reach(a) + reach(b);
+				const d2 = dx * dx + dy * dy;
+				if (d2 >= min * min) continue;
+				const d = sqrt(d2);
+				let nx, ny;
+				if (d < 0.01) {
+					const ang = random() * 2 * PI;
+					[nx, ny] = [cos(ang), sin(ang)];
+				} else {
+					[nx, ny] = [dx / d, dy / d];
+				}
+				const push = (min - d) / 2;
+				a.x -= nx * push;
+				a.y -= ny * push;
+				b.x += nx * push;
+				b.y += ny * push;
+				const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+				if (rel < 0) {
+					const imp = -rel * (1 + WALL_BOUNCE) / 2;
+					a.vx -= imp * nx;
+					a.vy -= imp * ny;
+					b.vx += imp * nx;
+					b.vy += imp * ny;
+					if (-rel > 2) clack = true;
+				}
 			}
 		}
+		for (const b of bodies) if (b.x != null) clampToBox(b, left, top, right, bottom);
 	}
-	for (const b of bodies) if (b.x != null) clampToBox(b, left, top, right, bottom);
 	return clack;
 }
 

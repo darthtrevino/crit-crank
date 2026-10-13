@@ -258,7 +258,10 @@ local function solidFor(sides)
 		verts = scaled(icosaVerts(), 1.0)
 		faces = facesFromNormals(verts, dodecaVerts())
 	end
-	solids[sides] = { verts = verts, faces = faces }
+	-- reach: the farthest vertex, so r * reach bounds the drawn silhouette
+	local reach = 0
+	for _, v in ipairs(verts) do reach = math.max(reach, sqrt(v[1] * v[1] + v[2] * v[2] + v[3] * v[3])) end
+	solids[sides] = { verts = verts, faces = faces, reach = reach }
 	return solids[sides]
 end
 
@@ -359,17 +362,23 @@ function Dice3D.toss(body, amount)
 	body.vy += sin(a) * v
 end
 
+-- Collision radius: the draw scale times the solid's farthest vertex.
+local function reach(b)
+	return b.r * solidFor(b.sides).reach
+end
+
 local function clampToBox(b, left, top, right, bottom)
 	local hit = false
-	if b.x < left + b.r then
-		b.x, b.vx, hit = left + b.r, math.abs(b.vx) * WALL_BOUNCE, true
-	elseif b.x > right - b.r then
-		b.x, b.vx, hit = right - b.r, -math.abs(b.vx) * WALL_BOUNCE, true
+	local r = reach(b)
+	if b.x < left + r then
+		b.x, b.vx, hit = left + r, math.abs(b.vx) * WALL_BOUNCE, true
+	elseif b.x > right - r then
+		b.x, b.vx, hit = right - r, -math.abs(b.vx) * WALL_BOUNCE, true
 	end
-	if b.y < top + b.r then
-		b.y, b.vy, hit = top + b.r, math.abs(b.vy) * WALL_BOUNCE, true
-	elseif b.y > bottom - b.r then
-		b.y, b.vy, hit = bottom - b.r, -math.abs(b.vy) * WALL_BOUNCE, true
+	if b.y < top + r then
+		b.y, b.vy, hit = top + r, math.abs(b.vy) * WALL_BOUNCE, true
+	elseif b.y > bottom - r then
+		b.y, b.vy, hit = bottom - r, -math.abs(b.vy) * WALL_BOUNCE, true
 	end
 	return hit
 end
@@ -397,43 +406,46 @@ function Dice3D.step(bodies, left, top, right, bottom)
 			end
 		end
 	end
-	for i = 1, #bodies do
-		local a = bodies[i]
-		for j = i + 1, #bodies do
-			local b = bodies[j]
-			if a.x and b.x then
-				local dx, dy = b.x - a.x, b.y - a.y
-				local min = a.r + b.r
-				local d2 = dx * dx + dy * dy
-				if d2 < min * min then
-					local d = sqrt(d2)
-					local nx, ny
-					if d < 0.01 then
-						local ang = math.random() * 2 * math.pi
-						nx, ny = cos(ang), sin(ang)
-					else
-						nx, ny = dx / d, dy / d
-					end
-					local push = (min - d) / 2
-					a.x -= nx * push
-					a.y -= ny * push
-					b.x += nx * push
-					b.y += ny * push
-					local rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny
-					if rel < 0 then
-						local j2 = -rel * (1 + WALL_BOUNCE) / 2
-						a.vx -= j2 * nx
-						a.vy -= j2 * ny
-						b.vx += j2 * nx
-						b.vy += j2 * ny
-						if -rel > 2 then clack = true end
+	-- a few passes so crowded dice fully separate
+	for _ = 1, 3 do
+		for i = 1, #bodies do
+			local a = bodies[i]
+			for j = i + 1, #bodies do
+				local b = bodies[j]
+				if a.x and b.x then
+					local dx, dy = b.x - a.x, b.y - a.y
+					local min = reach(a) + reach(b)
+					local d2 = dx * dx + dy * dy
+					if d2 < min * min then
+						local d = sqrt(d2)
+						local nx, ny
+						if d < 0.01 then
+							local ang = math.random() * 2 * math.pi
+							nx, ny = cos(ang), sin(ang)
+						else
+							nx, ny = dx / d, dy / d
+						end
+						local push = (min - d) / 2
+						a.x -= nx * push
+						a.y -= ny * push
+						b.x += nx * push
+						b.y += ny * push
+						local rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny
+						if rel < 0 then
+							local j2 = -rel * (1 + WALL_BOUNCE) / 2
+							a.vx -= j2 * nx
+							a.vy -= j2 * ny
+							b.vx += j2 * nx
+							b.vy += j2 * ny
+							if -rel > 2 then clack = true end
+						end
 					end
 				end
 			end
 		end
-	end
-	for _, b in ipairs(bodies) do
-		if b.x then clampToBox(b, left, top, right, bottom) end
+		for _, b in ipairs(bodies) do
+			if b.x then clampToBox(b, left, top, right, bottom) end
+		end
 	end
 	return clack
 end
