@@ -65,18 +65,24 @@ function UI.drawHeader(c, hp)
 	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
+-- Tabs are as wide as their titles, sharing the leftover space evenly.
 function UI.drawTabs(pages, current)
-	local w = UI.W / #pages
+	local textTotal = 0
+	for _, p in ipairs(pages) do textTotal += textW(fonts.small, p.title) end
+	local pad = (UI.W - textTotal) / #pages
+	local left = 0
 	for i, p in ipairs(pages) do
-		local x = math.floor((i - 1) * w)
-		local selected = i == current
-		if selected then
+		local w = textW(fonts.small, p.title) + pad
+		local x = math.floor(left)
+		local right = math.floor(left + w)
+		if i == current then
 			gfx.setColor(gfx.kColorBlack)
-			gfx.fillRoundRect(x + 2, UI.TABS_Y + 2, math.floor(w) - 4, UI.TABS_H - 2, 4)
+			gfx.fillRoundRect(x + 1, UI.TABS_Y + 2, right - x - 2, UI.TABS_H - 2, 4)
 			gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
 		end
-		drawText(fonts.small, p.title, x + math.floor(w / 2), UI.TABS_Y + 4, "center")
+		drawText(fonts.small, p.title, math.floor(left + w / 2), UI.TABS_Y + 4, "center")
 		gfx.setImageDrawMode(gfx.kDrawModeCopy)
+		left += w
 	end
 	gfx.setColor(gfx.kColorBlack)
 	gfx.drawLine(0, UI.BODY_Y - 1, UI.W, UI.BODY_Y - 1)
@@ -315,10 +321,10 @@ function UI.drawTray(t)
 	if row.kind == "rest" then
 		drawText(fonts.small, row.detail, TRAY_CX, y + 16, "center")
 		local lines = row.key == "long"
-			and { "Full HP, spell slots,", "features, half your", "Hit Dice; -1 Exhaustion" }
+			and { "Full HP, spell slots", "and features, half", "your Hit Dice back,", "-1 Exhaustion" }
 			or { "Recharge short-rest", "features, then spend", "Hit Dice to heal" }
 		for i, l in ipairs(lines) do
-			drawText(fonts.small, l, TRAY_CX, y + 38 + (i - 1) * 15, "center")
+			drawText(fonts.small, l, TRAY_CX, y + 34 + (i - 1) * 14, "center")
 		end
 		local rest = t.rest
 		local barW, barY = TRAY_W - 16, y + 100
