@@ -203,7 +203,7 @@ function drawTrayBox(g) {
 function drawResultBox(g, total, note, hot) {
 	const w = TRAY_W - 4, h = note ? 58 : 42;
 	const x = TRAY_CX - w / 2;
-	const y = Math.floor((DICE_TOP + DICE_BOTTOM - h) / 2);
+	const y = DICE_TOP + 3;
 	g.setColor("white");
 	g.fillRoundRect(x, y, w, h, 6);
 	g.setColor("black");

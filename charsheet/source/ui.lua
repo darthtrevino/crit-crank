@@ -267,11 +267,11 @@ local function drawTrayBox()
 	gfx.setColor(gfx.kColorBlack)
 end
 
--- The result popover drawn over the settled dice.
+-- The result popover, docked to the top of the tray over the settled dice.
 local function drawResultBox(total, note, hot)
 	local w, h = TRAY_W - 4, note and 58 or 42
 	local x = TRAY_CX - w / 2
-	local y = math.floor((UI.DICE_TOP + UI.DICE_BOTTOM - h) / 2)
+	local y = UI.DICE_TOP + 3
 	gfx.setColor(gfx.kColorWhite)
 	gfx.fillRoundRect(x, y, w, h, 6)
 	gfx.setColor(gfx.kColorBlack)
