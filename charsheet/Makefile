@@ -5,7 +5,7 @@ ifeq ($(SDK),)
 	SDK = $(shell egrep '^\s*SDKRoot' ~/.Playdate/config | head -n 1 | cut -c9-)
 endif
 
-GAME = charsheet
+GAME = critcrank
 
 build:
 	"$(SDK)/bin/pdc" source $(GAME).pdx

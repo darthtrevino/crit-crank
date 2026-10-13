@@ -8,10 +8,10 @@ A D&D 5e character sheet for Playdate. Pick a stat, attack, or spell and spin th
 
 ```sh
 make run      # compile with pdc and open in the Playdate Simulator
-make build    # compile only -> charsheet.pdx
+make build    # compile only -> critcrank.pdx
 ```
 
-To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload Game, or play.date sideload).
+To play on hardware, sideload `critcrank.pdx` (Simulator → Device → Upload Game, or play.date sideload).
 
 ## Controls
 

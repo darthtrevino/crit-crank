@@ -21,7 +21,7 @@ A root `Taskfile.yml` wraps these (`task check`, `task sim`, `task device`, …;
 
 | Task | Command |
 | --- | --- |
-| Build game | `cd charsheet && make build` (or `pdc source charsheet.pdx`) |
+| Build game | `cd charsheet && make build` (or `pdc source critcrank.pdx`) |
 | Run in Simulator | `cd charsheet && make run` (or `task sim`, which takes the lock) |
 | Deploy to device | `task device` (`charsheet/tools/deploy-device.sh`) |
 | Lua lint | `charsheet/tools/lint.sh` (needs `luacheck` on **Lua 5.4**; it crashes on 5.5. Set `LUACHECK=` to point at the binary) |
@@ -32,7 +32,7 @@ CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on
 
 ## Invariants
 
-- **Don't rename the bundle.** Keep `bundleID` `com.christrevino.charsheet`, the pdx name `charsheet.pdx`, and the `charsheet/` folder. Saved data, the device path `/Games/charsheet.pdx`, and charsync all depend on them. The display name "Crit Crank" lives only in `pdxinfo` and the docs.
+- **Don't rename the bundle.** Keep `bundleID` `com.christrevino.charsheet`, the pdx name `critcrank.pdx`, and the `charsheet/` folder. Saved data (keyed by `bundleID`), the device path `/Games/critcrank.pdx`, and charsync all depend on them. The display name "Crit Crank" lives only in `pdxinfo` and the docs.
 - New Lua globals must be added to `charsheet/.luacheckrc`.
 - When character JSON changes, update `model.rs` and the game's reader in step, and keep older imported files loading.
 - Never commit secrets, `charsync/target/`, or built `*.pdx`.
