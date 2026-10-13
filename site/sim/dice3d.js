@@ -304,6 +304,24 @@ export function step(bodies, left, top, right, bottom) {
 
 // ------------------------------------------------------------ drawing
 
+// A face's "up" in die space: the direction that points up the screen when
+// the die rests on that face. restAngle is its leftover on-screen angle at
+// rest (from the tilt), so resting labels draw exactly upright.
+function faceUp(sides, f) {
+	if (!f.up) {
+		const n = f.n;
+		const m = qMatrix(qMul(sides === 4 ? REST_TILT_D4 : REST_TILT, qFaceToViewer(...n)));
+		let [ux, uy, uz] = [m[1], m[4], m[7]];
+		const d = ux * n[0] + uy * n[1] + uz * n[2];
+		[ux, uy, uz] = norm(ux - d * n[0], uy - d * n[1], uz - d * n[2]);
+		const sx = m[0] * ux + m[1] * uy + m[2] * uz;
+		const sy = m[3] * ux + m[4] * uy + m[5] * uz;
+		f.up = [ux, uy, uz];
+		f.restAngle = atan2(sx, sy);
+	}
+	return [f.up, f.restAngle];
+}
+
 // style: "normal" | "dropped" | "hot"
 export function draw(g, body, cx, cy, r, label, style) {
 	const solid = solidFor(body.sides);
@@ -356,7 +374,18 @@ export function draw(g, body, cx, cy, r, label, style) {
 		fy /= frontFace.idx.length;
 		const s = String(label);
 		const f = fonts.small;
-		g.text(f, s, Math.floor(fx - g.textW(f, s) / 2), Math.floor(fy - f.height / 2), undefined, style === "hot" ? "white" : "copy");
+		const mode = style === "hot" ? "white" : "copy";
+		// turn the number with the face it sits on (degrees clockwise)
+		const [u, restAngle] = faceUp(body.sides, frontFace);
+		const sx = m[0] * u[0] + m[1] * u[1] + m[2] * u[2];
+		const sy = m[3] * u[0] + m[4] * u[1] + m[5] * u[2];
+		let angle = ((atan2(sx, sy) - restAngle) * 180) / PI;
+		angle = ((((angle + 180) % 360) + 360) % 360) - 180;
+		if (Math.abs(angle) < 1) {
+			g.text(f, s, Math.floor(fx - g.textW(f, s) / 2), Math.floor(fy - f.height / 2), undefined, mode);
+		} else {
+			g.textRotated(f, s, fx, fy, angle, mode);
+		}
 	}
 
 	if (style === "dropped") g.line(cx - r * 0.6, cy + r * 0.6, cx + r * 0.6, cy - r * 0.6, 2);

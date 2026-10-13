@@ -313,6 +313,16 @@ export class Gfx {
 		}
 	}
 
+	// Draws s centered on (cx, cy), turned `deg` degrees clockwise.
+	textRotated(font, s, cx, cy, deg, mode = "copy") {
+		const c = this.ctx;
+		c.save();
+		c.translate(cx, cy);
+		c.rotate((deg * Math.PI) / 180);
+		this.text(font, s, -this.textW(font, s) / 2, -font.height / 2, undefined, mode);
+		c.restore();
+	}
+
 	icon(kind, ch, x, base, color) {
 		const c = this.ctx;
 		c.fillStyle = color;
