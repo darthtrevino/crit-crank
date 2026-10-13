@@ -13,20 +13,24 @@ env:
 
 jobs:
   build-charsync:
-    name: Build charsync (${{ matrix.os }})
+    name: Build ${{ matrix.asset }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
+          # Static musl binary: no glibc floor, runs on any x86_64 Linux.
           - os: ubuntu-latest
-            binary: charsync
             asset: charsync-linux
+            targets: x86_64-unknown-linux-musl
+          # Universal binary for both Apple Silicon and Intel Macs.
           - os: macos-latest
-            binary: charsync
             asset: charsync-macos
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
           - os: windows-latest
-            binary: charsync.exe
             asset: charsync-windows.exe
+            targets: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -35,11 +39,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --release
+        with:
+          targets: ${{ matrix.targets }}
+      - name: Install musl toolchain
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -yq musl-tools
+      - name: Build
+        run: |
+          IFS=, read -ra targets <<< "${{ matrix.targets }}"
+          for target in "${targets[@]}"; do
+            cargo build --release --locked --target "$target"
+          done
       - name: Prepare release binary
         run: |
           mkdir -p ../dist
-          cp "target/release/${{ matrix.binary }}" "../dist/${{ matrix.asset }}"
+          out="../dist/${{ matrix.asset }}"
+          case "${{ runner.os }}" in
+            macOS)
+              lipo -create -output "$out" \
+                target/aarch64-apple-darwin/release/charsync \
+                target/x86_64-apple-darwin/release/charsync
+              lipo -info "$out"
+              ;;
+            Windows)
+              cp "target/${{ matrix.targets }}/release/charsync.exe" "$out"
+              ;;
+            *)
+              cp "target/${{ matrix.targets }}/release/charsync" "$out"
+              file "$out"
+              ;;
+          esac
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}

@@ -31,9 +31,10 @@ make run          # build with pdc and open in the Simulator
 
 To play on hardware, download `crit-crank.pdx.zip` from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest), and sideload it at [play.date/account/sideload](https://play.date/account/sideload/).
 
-To bring in a D&D Beyond character (it must be set to Public), download the matching `charsync` binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest). Make it executable on macOS/Linux, then run the command for your platform:
+To bring in a D&D Beyond character (it must be set to Public), download the matching `charsync` binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest). Make it executable on macOS/Linux (and clear the quarantine flag on macOS), then run the command for your platform:
 
 ```sh
+chmod +x charsync-macos && xattr -d com.apple.quarantine charsync-macos  # macOS; Linux: chmod +x charsync-linux
 ./charsync-linux import https://www.dndbeyond.com/characters/<id>     # Linux
 ./charsync-macos import https://www.dndbeyond.com/characters/<id>     # macOS
 .\charsync-windows.exe import https://www.dndbeyond.com/characters/<id> # Windows PowerShell
