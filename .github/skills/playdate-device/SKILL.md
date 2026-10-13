@@ -31,7 +31,7 @@ Use `scripts/pdserial.py`, which needs only the Python standard library:
 python3 .github/skills/playdate-device/scripts/pdserial.py "btn down" "btn a" "btn menu"
 python3 .github/skills/playdate-device/scripts/pdserial.py --screen /tmp/dev.png   # then view the PNG
 ```
-- Buttons: `btn a|b|up|down|left|right|menu`. There's no crank-angle command, so use Ⓐ quick roll instead.
+- Buttons: `btn a|b|up|down|left|right|menu`. There's no crank-angle command, and only the crank rolls dice (Ⓐ opens the row's rule), so ask the user to crank when a roll is needed.
 - The device echoes `msg` lines back. When the game replies over serial, prefix lines with `cs ` so the replies can be told apart from the echo.
 - **Never screenshot the user's desktop.** Use `--screen` instead.
 

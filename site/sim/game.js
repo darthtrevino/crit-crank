@@ -12,7 +12,6 @@ import { H } from "./gfx.js";
 const CRANK_START = 30;
 const CRANK_TICK = 40;
 const SETTLE_FRAMES = 8;
-const AUTO_FRAMES = 16;
 const CRANK_ADJUST = 20;
 const TOAST_FRAMES = 75;
 const POOL_MAX_DICE = 12;
@@ -410,7 +409,7 @@ export class Game {
 		}
 	}
 
-	startRoll(auto) {
+	startRoll() {
 		const s = this.state;
 		const row = this.selectedRollRow();
 		if (!row) return;
@@ -451,7 +450,7 @@ export class Game {
 			else Dice3D.place(b, xs[i], ys[i], r);
 			return b;
 		});
-		s.roll = { phase: "tumble", row, spec, crit, mode: s.mode, faces, bodies, auto: auto ? (calm() ? 1 : AUTO_FRAMES) : null };
+		s.roll = { phase: "tumble", row, spec, crit, mode: s.mode, faces, bodies };
 		this.spinAll(0.35);
 		this.crank.tick = 0;
 		this.crank.idle = 0;
@@ -517,16 +516,6 @@ export class Game {
 			return;
 		}
 		if (roll && roll.phase === "tumble") {
-			if (roll.auto != null) {
-				roll.auto--;
-				this.spinAll(0.12);
-				if (roll.auto % 3 === 0) {
-					roll.faces = Dice.faces(roll.spec);
-					Sound.tick();
-				}
-				if (roll.auto <= 0) this.settle();
-				return;
-			}
 			if (amount > 0.5) {
 				crank.idle = 0;
 				this.spinAll(amount * 0.004);
@@ -563,7 +552,7 @@ export class Game {
 			crank.windup += amount;
 			if (crank.windup >= CRANK_START) {
 				crank.windup = 0;
-				this.startRoll(false);
+				this.startRoll();
 			}
 		} else {
 			crank.idle++;
@@ -708,12 +697,12 @@ export class Game {
 		return !!row && row.kind === "trait";
 	}
 
+	// Only the crank rolls; Ⓐ explains the row (or takes one off a counter).
 	pressA() {
-		if (this.diceMoving() || this.restHint()) return;
-		if (this.traitRow()) { this.openRules(); return; }
+		if (this.diceMoving()) return;
 		const r = this.resourceRow();
 		if (r) { this.holdRepeat("a", () => this.adjustRow(r, -1)); return; }
-		this.startRoll(true);
+		if (this.selectedRow()) this.openRules();
 	}
 
 	pressB() {

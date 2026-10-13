@@ -310,7 +310,7 @@ export function drawTray(g, t) {
 	drawTrayBox(g);
 	if (!roll) {
 		drawDiceGrid(g, t.preview.dice, t.preview.bodies);
-		g.text(s, t.docked ? "Press Ⓐ to roll" : "Crank to roll 🎣", TRAY_CX, hintY, "center");
+		g.text(s, t.docked ? "Undock the crank" : "Crank to roll 🎣", TRAY_CX, hintY, "center");
 		return;
 	}
 	if (roll.phase === "tumble") {
@@ -349,12 +349,12 @@ export function drawFooter(g, mode, toast) {
 		return;
 	}
 	if (mode === "pool") {
-		g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, fy);
+		g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣 roll  Ⓐ rule", 6, fy);
 		g.text(s, "Ⓑ clear", W - 6, fy, "right");
 		return;
 	}
 	if (mode === "rest") {
-		g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣 crank to rest", 6, fy);
+		g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣 rest  Ⓐ rule", 6, fy);
 		return;
 	}
 	if (mode === "trait") {
@@ -367,7 +367,7 @@ export function drawFooter(g, mode, toast) {
 		g.text(s, "Ⓐ -1  Ⓑ +1", W - 6, fy, "right");
 		return;
 	}
-	g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, fy);
+	g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣 roll  Ⓐ rule", 6, fy);
 	if (mode === "plain") return;
 	const modeText = mode === "adv" ? "ADV" : mode === "dis" ? "DIS" : mode === "crit" ? "CRIT" : "normal";
 	g.text(s, "Ⓑ " + modeText, W - 6, fy, "right");

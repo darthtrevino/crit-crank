@@ -402,7 +402,7 @@ function UI.drawTray(t)
 	drawTrayBox()
 	if not roll then
 		drawDiceGrid(t.preview.dice, t.preview.bodies)
-		local hint = playdate.isCrankDocked() and "Press Ⓐ to roll" or "Crank to roll 🎣"
+		local hint = playdate.isCrankDocked() and "Undock the crank" or "Crank to roll 🎣"
 		drawText(fonts.small, hint, TRAY_CX, hintY, "center")
 		return
 	end
@@ -453,12 +453,12 @@ function UI.drawFooter(mode, toast)
 		return
 	end
 	if mode == "pool" then
-		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, UI.FOOTER_Y + 2)
+		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 roll  Ⓐ rule", 6, UI.FOOTER_Y + 2)
 		drawText(fonts.small, "Ⓑ clear", UI.W - 6, UI.FOOTER_Y + 2, "right")
 		return
 	end
 	if mode == "rest" then
-		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 crank to rest", 6, UI.FOOTER_Y + 2)
+		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 rest  Ⓐ rule", 6, UI.FOOTER_Y + 2)
 		return
 	end
 	if mode == "trait" then
@@ -471,7 +471,7 @@ function UI.drawFooter(mode, toast)
 		drawText(fonts.small, "Ⓐ -1  Ⓑ +1", UI.W - 6, UI.FOOTER_Y + 2, "right")
 		return
 	end
-	drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, UI.FOOTER_Y + 2)
+	drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 roll  Ⓐ rule", 6, UI.FOOTER_Y + 2)
 	if mode == "plain" then return end
 	local modeText = (mode == "adv" and "ADV") or (mode == "dis" and "DIS")
 		or (mode == "crit" and "CRIT") or "normal"
