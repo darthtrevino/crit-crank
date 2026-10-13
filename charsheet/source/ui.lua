@@ -269,8 +269,10 @@ function UI.diceLayout(n, top, bottom)
 	return r, xs, ys
 end
 
--- "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, else nil.
+-- "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, "CRITICAL" for
+-- doubled crit damage, else nil.
 function UI.modeLabel(spec, mode)
+	if spec and spec.critical then return "CRITICAL" end
 	if not (spec and spec.check) then return nil end
 	return (mode == "adv" and "ADVANTAGE") or (mode == "dis" and "DISADVANTAGE") or nil
 end
