@@ -29,11 +29,11 @@
 	<main id="main">
 		<section class="demo" aria-labelledby="demo-title">
 			<h2 id="demo-title">Try it</h2>
-			<p class="hint">This is the real game, ported to your browser. Drag the crank in a circle (or scroll over the screen) to roll. Click the buttons or use the keys: <kbd>↑</kbd><kbd>↓</kbd> pick a row, <kbd>←</kbd><kbd>→</kbd> switch pages, <kbd>X</kbd> is Ⓐ (quick-roll), <kbd>Z</kbd> is Ⓑ (advantage), <kbd>[</kbd><kbd>]</kbd> (or arrows on the focused crank) turn the crank and <kbd>Esc</kbd> is Menu.</p>
+			<p class="hint">This is the real game, ported to your browser. Drag the crank in a circle (or scroll over the screen) to roll. Click the buttons or use the keys: <kbd>↑</kbd><kbd>↓</kbd> pick a row, <kbd>←</kbd><kbd>→</kbd> switch pages, <kbd>X</kbd> is Ⓐ (quick-roll), <kbd>Z</kbd> is Ⓑ (advantage, or critical on damage), <kbd>[</kbd><kbd>]</kbd> (or arrows on the focused crank) turn the crank and <kbd>Esc</kbd> is Menu.</p>
 			<div class="pd" data-sim>
 				<div class="pd-body">
 					<span class="pd-lock" aria-hidden="true"></span>
-					<button class="pd-menu" data-btn="menu" aria-label="Menu button: pause screen, hero and rules"></button>
+					<button class="pd-menu" data-btn="menu" aria-label="Menu button: pause screen, hero and Read Rule"></button>
 					<div class="pd-bezel">
 						<canvas class="pd-screen" width="400" height="240" role="img" aria-label="Crit Crank running on a Playdate screen"></canvas>
 					</div>
@@ -97,19 +97,19 @@
 
 		<section class="rules" aria-labelledby="rules-title">
 			<h2 id="rules-title">Rules at a pause</h2>
-			<p>Press Menu and the left half of the pause screen explains the row you have selected: what it does and how its bonus adds up. Long text? Pick <em>Rules</em> to read it all, cranking to scroll.</p>
+			<p>Press Menu and the left half of the pause screen explains the row you have selected: what it does and how its bonus adds up. Long text? Pick <em>Read Rule</em> to read it all, cranking to scroll.</p>
 			<div class="pause-row">
-				<div class="pause"><img class="pixel" src="assets/pause_dex.png" width="200" height="240" alt="Pause card for Dexterity with its description"><ul class="sysmenu" aria-hidden="true"><li>hero</li><li>rules</li><li class="sep">volume</li><li>home</li></ul></div>
-				<div class="pause"><img class="pixel" src="assets/pause_firebolt.png" width="200" height="240" alt="Pause card for Fire Bolt with its attack bonus breakdown"><ul class="sysmenu" aria-hidden="true"><li>hero</li><li>rules</li><li class="sep">volume</li><li>home</li></ul></div>
+				<div class="pause"><img class="pixel" src="assets/pause_dex.png" width="200" height="240" alt="Pause card for Dexterity with its description"><ul class="sysmenu" aria-hidden="true"><li>hero</li><li>read rule</li><li class="sep">volume</li><li>home</li></ul></div>
+				<div class="pause"><img class="pixel" src="assets/pause_firebolt.png" width="200" height="240" alt="Pause card for Fire Bolt with its attack bonus breakdown"><ul class="sysmenu" aria-hidden="true"><li>hero</li><li>read rule</li><li class="sep">volume</li><li>home</li></ul></div>
 			</div>
 		</section>
 
 		<section aria-labelledby="sync-title">
 			<h2 id="sync-title">Bring your own character</h2>
-			<p><b>charsync</b> is a small command-line tool for Mac, Windows and Linux. It turns a public D&amp;D Beyond character into a Crit Crank hero and sends it to your Playdate over USB.</p>
-<pre><code>cd charsync
-cargo install --path .
-charsync import https://www.dndbeyond.com/characters/12345678</code></pre>
+			<p><b>charsync</b> is a small command-line tool for Mac, Windows and Linux. Download the binary for your system from the <a href="https://github.com/darthtrevino/crit-crank/releases/latest">latest release</a>. It turns a public D&amp;D Beyond character into a Crit Crank hero and sends it to your Playdate over USB. Run <code>./charsync-macos</code> on macOS, <code>./charsync-linux</code> on Linux, or <code>.\charsync-windows.exe</code> in Windows PowerShell. On macOS and Linux, make it executable first; on macOS also clear the download quarantine:</p>
+<pre><code>chmod +x charsync-macos
+xattr -d com.apple.quarantine charsync-macos
+./charsync-macos import https://www.dndbeyond.com/characters/12345678</code></pre>
 			<p>It converts ability scores, saves, skills, HP, AC, spell slots, weapons, damage and healing spells, and limited-use features. Spell and feature descriptions show up on the pause screen and in the Rules viewer too. See the <a href="https://github.com/darthtrevino/crit-crank/tree/main/charsync">charsync README</a>.</p>
 		</section>
 

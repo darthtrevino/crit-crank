@@ -2,5 +2,6 @@ charsheet/*.pdx
 .DS_Store
 charsync/target/
 .impeccable/
+.task/
 charsheet/source/devrec.lua
 charsheet/source/devshots.lua

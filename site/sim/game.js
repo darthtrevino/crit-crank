@@ -708,7 +708,13 @@ export class Game {
 			this.clearPool();
 			return;
 		}
-		s.mode = { normal: "adv", adv: "dis", dis: "normal" }[s.mode];
+		if (sel && sel.spec && !sel.spec.check) {
+			// damage rolls toggle normal / critical instead of the d20 mode
+			if (!sel.critable) return;
+			s.critPending = !s.critPending;
+		} else {
+			s.mode = { normal: "adv", adv: "dis", dis: "normal" }[s.mode];
+		}
 		s.dirty = true;
 		s.roll = null;
 	}
@@ -750,7 +756,7 @@ export class Game {
 		if (s.menu) {
 			const d = Rules.describe(this.character, this.selectedRow(), this.currentPage());
 			UI.drawRuleCard(g, d.title || "", d.sub || "", d.body || "");
-			UI.drawSystemMenu(g, [{ label: "Hero", value: this.names[s.menu.hero] }, { label: "Rules" }], s.menu.sel);
+			UI.drawSystemMenu(g, [{ label: "Hero", value: this.names[s.menu.hero] }, { label: "Read Rule" }], s.menu.sel);
 			g.present();
 			return;
 		}
@@ -787,6 +793,7 @@ export class Game {
 		if (row && (row.kind === "resource" || row.kind === "counter")) footerMode = "resource";
 		else if (row && row.kind === "rest") footerMode = "rest";
 		else if (row && row.pool) footerMode = "pool";
+		else if (row && row.spec && !row.spec.check) footerMode = !row.critable ? "plain" : s.critPending ? "crit" : "dmg";
 		UI.drawFooter(g, footerMode, s.toast);
 		if (s.rules && this.rulesY != null) UI.drawRuleViewer(g, s.rules, this.rulesY);
 		g.present();
@@ -795,7 +802,7 @@ export class Game {
 	// Plain-text summary of what's on screen, for the page's live region.
 	statusText() {
 		const s = this.state;
-		if (s.menu) return s.menu.sel === 0 ? `Pause menu. Hero: ${this.names[s.menu.hero]}` : "Pause menu. Rules";
+		if (s.menu) return s.menu.sel === 0 ? `Pause menu. Hero: ${this.names[s.menu.hero]}` : "Pause menu. Read Rule";
 		if (s.rules) return `Rules: ${s.rules.title}. ${s.rules.sub} ${s.rules.text}`;
 		const page = this.currentPage();
 		const row = this.selectedRow();
@@ -806,7 +813,8 @@ export class Game {
 			else if (row.kind === "counter") value = String(this.getCounter(row.key));
 			parts.push(`${row.label}${value ? " " + value : ""}`);
 		}
-		if (s.mode !== "normal") parts.push(s.mode === "adv" ? "Advantage" : "Disadvantage");
+		if (row && row.critable && s.critPending) parts.push("Critical");
+		else if (s.mode !== "normal" && row && row.spec && row.spec.check) parts.push(s.mode === "adv" ? "Advantage" : "Disadvantage");
 		const roll = s.roll;
 		if (roll && roll.phase === "done") {
 			const r = roll.result;

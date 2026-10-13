@@ -17,15 +17,18 @@ Guidance for AI coding agents working on Crit Crank. Read this before you change
 
 ## Commands
 
+A root `Taskfile.yml` wraps these (`task check`, `task sim`, `task device`, …; see `task --list`).
+
 | Task | Command |
 | --- | --- |
 | Build game | `cd charsheet && make build` (or `pdc source charsheet.pdx`) |
-| Run in Simulator | `cd charsheet && make run` |
+| Run in Simulator | `cd charsheet && make run` (or `task sim`, which takes the lock) |
+| Deploy to device | `task device` (`charsheet/tools/deploy-device.sh`) |
 | Lua lint | `charsheet/tools/lint.sh` (needs `luacheck` on **Lua 5.4**; it crashes on 5.5. Set `LUACHECK=` to point at the binary) |
 | Rust | `cd charsync && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
 | Site preview | `cd site && python3 -m http.server` |
 
-CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on PRs and on `main`. Keep all of them green. `pages.yml` deploys `site/` as-is. `release.yml` runs on a `v*` tag: it stamps the version into `pdxinfo`, builds, and attaches `crit-crank.pdx.zip` to a GitHub Release. The site links to `releases/latest/download/crit-crank.pdx.zip`.
+CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on PRs and on `main`. Keep all of them green. `pages.yml` deploys `site/` as-is. `release.yml` runs on a `v*` tag: it stamps the version into `pdxinfo`, builds, and attaches `crit-crank.pdx.zip` plus Linux, macOS and Windows `charsync` binaries to a GitHub Release. The site links to `releases/latest/download/crit-crank.pdx.zip`.
 
 ## Invariants
 

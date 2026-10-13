@@ -31,11 +31,13 @@ make run          # build with pdc and open in the Simulator
 
 To play on hardware, download `crit-crank.pdx.zip` from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest), and sideload it at [play.date/account/sideload](https://play.date/account/sideload/).
 
-To bring in a D&D Beyond character (it must be set to Public):
+To bring in a D&D Beyond character (it must be set to Public), download the matching `charsync` binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest). Make it executable on macOS/Linux (and clear the quarantine flag on macOS), then run the command for your platform:
 
 ```sh
-cd charsync
-cargo run --release -- import https://www.dndbeyond.com/characters/<id>
+chmod +x charsync-macos && xattr -d com.apple.quarantine charsync-macos  # macOS; Linux: chmod +x charsync-linux
+./charsync-linux import https://www.dndbeyond.com/characters/<id>     # Linux
+./charsync-macos import https://www.dndbeyond.com/characters/<id>     # macOS
+.\charsync-windows.exe import https://www.dndbeyond.com/characters/<id> # Windows PowerShell
 ```
 
 See the [charsheet README](charsheet/README.md) for controls and rules, and the [charsync README](charsync/README.md) for everything it converts.
@@ -56,7 +58,19 @@ charsheet/tools/lint.sh
 (cd site && python3 -m http.server)
 ```
 
-CI runs all of these on every pull request and push to `main`. Changes under `site/` on `main` redeploy GitHub Pages.
+A [Taskfile](https://taskfile.dev) wraps these and other common jobs. Run `task --list` to see them all:
+
+| Task | What it does |
+| --- | --- |
+| `task check` | Lint, build and Rust checks (everything CI runs) |
+| `task lint` / `task build` / `task rust` | One check at a time |
+| `task sim` / `task sim:stop` | Take the Simulator lock, build and launch / quit and release |
+| `task device` | Build, copy to a USB-connected Playdate and launch it |
+| `task device:screen -- out.png` | Screenshot the device |
+| `task charsync -- import <id>` | Run charsync from source |
+| `task site` | Serve the docsite at http://localhost:8000 |
+
+CI runs the lint, build and Rust checks on every pull request and push to `main`. Changes under `site/` on `main` redeploy GitHub Pages.
 
 ### Releasing
 
@@ -64,7 +78,7 @@ CI runs all of these on every pull request and push to `main`. Changes under `si
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-The Release workflow sets `version` in `pdxinfo` from the tag, builds the game, and publishes a GitHub Release with `crit-crank.pdx.zip` attached. The site's download button always points at the latest release.
+The Release workflow sets `version` in `pdxinfo` from the tag, builds the game, and publishes a GitHub Release with `crit-crank.pdx.zip` and native `charsync` binaries for Linux, macOS and Windows attached. The site's download button always points at the latest release.
 
 ## License
 
