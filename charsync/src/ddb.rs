@@ -3,7 +3,7 @@
 //! The feed is undocumented, so every lookup is defensive: missing or
 //! unexpected fields fall back to sane defaults instead of failing.
 
-use crate::model::{Abilities, Action, Character, Feature, proficiency};
+use crate::model::{Abilities, Action, Character, Feature, Traits, proficiency};
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
@@ -307,6 +307,65 @@ struct Mod<'a> {
     sub: &'a str,
     value: Option<i32>,
     stat: Option<i32>,
+    name: Option<&'a str>,
+    entity: Option<i64>,
+}
+
+// D&D Beyond entity types for proficiency modifiers.
+const ARMOR_ENTITIES: [i64; 2] = [174869515, 701257905];
+const WEAPON_ENTITIES: [i64; 2] = [1782728300, 660121713];
+const TOOL_ENTITY: i64 = 2103445194;
+
+const CONDITIONS: [&str; 15] = [
+    "blinded",
+    "charmed",
+    "deafened",
+    "exhaustion",
+    "frightened",
+    "grappled",
+    "incapacitated",
+    "invisible",
+    "paralyzed",
+    "petrified",
+    "poisoned",
+    "prone",
+    "restrained",
+    "stunned",
+    "unconscious",
+];
+
+/// (trait key, set subType, D&D Beyond id) for speeds and senses.
+const SPEEDS: [(&str, &str, i32); 4] = [
+    ("fly", "innate-speed-flying", 4),
+    ("swim", "innate-speed-swimming", 5),
+    ("climb", "innate-speed-climbing", 3),
+    ("burrow", "innate-speed-burrowing", 2),
+];
+const SENSES: [(&str, i32); 4] = [
+    ("darkvision", 2),
+    ("blindsight", 1),
+    ("tremorsense", 3),
+    ("truesight", 4),
+];
+
+/// "light-armor" -> "Light Armor" when D&D Beyond leaves out the friendly name.
+fn title_case(sub: &str) -> String {
+    sub.split('-')
+        .filter(|w| !w.is_empty())
+        .map(|w| {
+            let mut c = w.chars();
+            c.next()
+                .map(|f| f.to_ascii_uppercase().to_string() + c.as_str())
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn push_unique(list: &mut Vec<String>, name: String) {
+    if !name.is_empty() && !list.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
+        list.push(name);
+    }
 }
 
 // ---------------------------------------------------------------- converter
@@ -345,6 +404,8 @@ impl<'a> Ctx<'a> {
                         sub: m["subType"].as_str().unwrap_or(""),
                         value: int(&m["value"]).or_else(|| int(&m["fixedValue"])),
                         stat: int(&m["statId"]),
+                        name: text(&m["friendlySubtypeName"]),
+                        entity: m["entityTypeId"].as_i64(),
                     });
                 }
             }
@@ -460,6 +521,84 @@ impl<'a> Ctx<'a> {
             + self.sum("bonus", "speed")
             + self.sum("bonus", "speed-walking")
             + self.sum("bonus", "unarmored-movement")
+    }
+
+    fn traits(&self, walk: i32) -> Traits {
+        let mut t = Traits::default();
+        let d = self.d;
+        let custom = |list: &Value, id_key: &str, id: i32| {
+            arr(list)
+                .iter()
+                .find(|c| int(&c[id_key]) == Some(id))
+                .and_then(|c| int(&c["distance"]))
+        };
+        for (key, sub, id) in SPEEDS {
+            let race = int(&d["race"]["weightSpeeds"]["normal"][key]).unwrap_or(0);
+            let set = self
+                .mods
+                .iter()
+                .filter(|m| m.kind == "set" && m.sub == sub)
+                // "equal to your walking speed" has no value
+                .map(|m| m.value.unwrap_or(walk))
+                .max()
+                .unwrap_or(0);
+            let ft = custom(&d["customSpeeds"], "movementId", id).unwrap_or(race.max(set));
+            if ft > 0 {
+                t.speeds.insert(key.into(), ft);
+            }
+        }
+        for (key, id) in SENSES {
+            let ft = self
+                .mods
+                .iter()
+                .filter(|m| (m.kind == "set-base" || m.kind == "sense") && m.sub == key)
+                .filter_map(|m| m.value)
+                .max()
+                .unwrap_or(0);
+            let ft = custom(&d["customSenses"], "senseId", id).unwrap_or(ft);
+            if ft > 0 {
+                t.senses.insert(key.into(), ft);
+            }
+        }
+        for m in &self.mods {
+            let name = ascii(
+                &m.name
+                    .map(str::to_string)
+                    .unwrap_or_else(|| title_case(m.sub)),
+            );
+            let list = match m.kind {
+                "language" => &mut t.languages,
+                "resistance" | "immunity" | "vulnerability" if CONDITIONS.contains(&m.sub) => {
+                    if m.kind != "immunity" {
+                        continue;
+                    }
+                    &mut t.condition_immunities
+                }
+                "resistance" => &mut t.resistances,
+                "immunity" => &mut t.immunities,
+                "vulnerability" => &mut t.vulnerabilities,
+                "proficiency" => {
+                    let e = m.entity.unwrap_or(0);
+                    let s = m.sub;
+                    if ARMOR_ENTITIES.contains(&e) || s.ends_with("-armor") || s == "shields" {
+                        &mut t.armor
+                    } else if WEAPON_ENTITIES.contains(&e) || s.ends_with("-weapons") {
+                        &mut t.weapons
+                    } else if e == TOOL_ENTITY
+                        || ["-tools", "-supplies", "-kit", "-utensils"]
+                            .iter()
+                            .any(|x| s.ends_with(x))
+                    {
+                        &mut t.tools
+                    } else {
+                        continue;
+                    }
+                }
+                _ => continue,
+            };
+            push_unique(list, name);
+        }
+        t
     }
 
     fn ac(&self) -> i32 {
@@ -1027,6 +1166,7 @@ pub fn convert(raw: &Value) -> Result<Character> {
         .and_then(|c| int(&c["definition"]["hitDice"]))
         .unwrap_or(8);
     let slots = ctx.slots();
+    let speed = ctx.speed();
 
     Ok(Character {
         key: format!("ddb{id}"),
@@ -1038,7 +1178,7 @@ pub fn convert(raw: &Value) -> Result<Character> {
         level: ctx.level,
         ac: ctx.ac(),
         hp: ctx.hp(),
-        speed: ctx.speed(),
+        speed,
         abilities: ctx.abilities.clone(),
         saves: ctx.saves(),
         skills: ctx.skills(),
@@ -1058,6 +1198,7 @@ pub fn convert(raw: &Value) -> Result<Character> {
         slots,
         features,
         actions,
+        traits: ctx.traits(speed),
     })
 }
 
@@ -1105,8 +1246,19 @@ mod tests {
             "stats": [{"id":1,"value":8},{"id":2,"value":14},{"id":3,"value":14},{"id":4,"value":16},{"id":5,"value":12},{"id":6,"value":10}],
             "bonusStats": [], "overrideStats": [],
             "baseHitPoints": 14, "bonusHitPoints": null, "overrideHitPoints": null,
-            "modifiers": {"race": [{"type":"bonus","subType":"intelligence-score","value":1}],
-                          "class": [{"type":"proficiency","subType":"intelligence-saving-throws"},{"type":"proficiency","subType":"arcana"}]},
+            "modifiers": {"race": [{"type":"bonus","subType":"intelligence-score","value":1},
+                                   {"type":"set-base","subType":"darkvision","value":60},
+                                   {"type":"language","subType":"common","friendlySubtypeName":"Common"},
+                                   {"type":"language","subType":"elvish","friendlySubtypeName":"Elvish"},
+                                   {"type":"immunity","subType":"charmed","friendlySubtypeName":"Charmed"},
+                                   {"type":"set","subType":"innate-speed-flying","value":null},
+                                   {"type":"proficiency","subType":"longsword","friendlySubtypeName":"Longsword","entityTypeId":1782728300}],
+                          "class": [{"type":"proficiency","subType":"intelligence-saving-throws"},{"type":"proficiency","subType":"arcana"},
+                                    {"type":"proficiency","subType":"light-armor"},
+                                    {"type":"language","subType":"common","friendlySubtypeName":"Common"}],
+                          "background": [{"type":"proficiency","subType":"calligraphers-supplies","friendlySubtypeName":"Calligrapher’s Supplies","entityTypeId":2103445194}],
+                          "item": [{"type":"resistance","subType":"fire","friendlySubtypeName":"Fire","componentId":77}]},
+            "customSenses": [{"senseId": 1, "distance": 10}],
             "classes": [{"id": 9, "level": 3, "isStartingClass": true, "definition": {"name":"Wizard","hitDice":6,"spellCastingAbilityId":4,"canCastSpells":true,
                 "spellRules":{"multiClassSpellSlotDivisor":1,"levelSpellSlots":[[0,0,0,0,0,0,0,0,0],[2,0,0,0,0,0,0,0,0],[3,0,0,0,0,0,0,0,0],[4,2,0,0,0,0,0,0,0]]}},
                 "classFeatures": []}],
@@ -1128,6 +1280,16 @@ mod tests {
     }
 
     #[test]
+    fn traits_are_optional_in_json() {
+        let mut c = convert(&wizard()).unwrap();
+        c.traits = Traits::default();
+        let json = serde_json::to_value(&c).unwrap();
+        assert!(json.get("traits").is_none());
+        let back: Character = serde_json::from_value(json).unwrap();
+        assert!(back.traits.is_empty());
+    }
+
+    #[test]
     fn converts_a_wizard() {
         let c = convert(&wizard()).unwrap();
         assert_eq!(c.key, "ddb1");
@@ -1138,6 +1300,20 @@ mod tests {
         assert_eq!(c.saves, vec!["int"]);
         assert_eq!(c.skills.get("arcana"), Some(&1));
         assert_eq!(c.spell_ability.as_deref(), Some("int"));
+        let t = &c.traits;
+        assert_eq!(t.languages, ["Common", "Elvish"]);
+        assert_eq!(t.senses.get("darkvision"), Some(&60));
+        assert_eq!(t.senses.get("blindsight"), Some(&10));
+        assert_eq!(t.speeds.get("fly"), Some(&30));
+        assert_eq!(t.condition_immunities, ["Charmed"]);
+        assert!(
+            t.resistances.is_empty(),
+            "unequipped item resistance ignored"
+        );
+        assert_eq!(t.armor, ["Light Armor"]);
+        assert_eq!(t.weapons, ["Longsword"]);
+        assert_eq!(t.tools, ["Calligrapher's Supplies"]);
+        assert!(t.immunities.is_empty());
         let names: Vec<_> = c
             .actions
             .iter()
