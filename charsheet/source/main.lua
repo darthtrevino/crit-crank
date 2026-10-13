@@ -556,7 +556,7 @@ local function startRoll()
 	local faces = Dice.faces(spec)
 	local bodies = {}
 	local preview = previewFor(row)
-	local r, xs, ys = UI.diceLayout(#faces)
+	local r, xs, ys = UI.diceLayout(#faces, UI.diceTop(spec, state.mode))
 	for i, d in ipairs(faces) do
 		-- pick the dice up from where they were resting
 		local b = Dice3D.newBody(d.sides)
@@ -636,7 +636,7 @@ local function updateRoll()
 
 	if roll and roll.phase ~= "done" then
 		local inset = UI.DICE_INSET
-		local clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.DICE_TOP + inset,
+		local clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.diceTop(roll.spec, roll.mode) + inset,
 			UI.DICE_RIGHT - inset, UI.DICE_BOTTOM - inset)
 		if clack then playClack() end
 		for _, b in ipairs(roll.bodies) do Dice3D.update(b) end

@@ -170,6 +170,7 @@ export const DICE_RIGHT = W - 3;
 export const DICE_TOP = BODY_Y + 3;
 export const DICE_BOTTOM = FOOTER_Y - 20;
 export const DICE_INSET = 2;
+export const DICE_LABEL_H = 15;
 const DIE_REACH = 1.15; // the widest solid (d4) reaches 1.15 r from its centre
 
 // Resting grid for n dice between top and bottom: { r, xs, ys }.
@@ -199,11 +200,28 @@ export function diceLayout(n, top = DICE_TOP, bottom = DICE_BOTTOM) {
 	return { r, xs, ys };
 }
 
-function drawTrayBox(g) {
+// "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, else null.
+export function modeLabel(spec, mode) {
+	if (!spec || !spec.check) return null;
+	return mode === "adv" ? "ADVANTAGE" : mode === "dis" ? "DISADVANTAGE" : null;
+}
+
+// Top of the space the dice move in: below the mode label when one is docked.
+export function diceTop(spec, mode) {
+	return DICE_TOP + (modeLabel(spec, mode) ? DICE_LABEL_H : 0);
+}
+
+function drawTrayBox(g, label) {
+	const w = DICE_RIGHT - DICE_LEFT;
 	g.setColor("black");
 	g.setDither(0.5, "bayer2");
-	g.drawRoundRect(DICE_LEFT, DICE_TOP, DICE_RIGHT - DICE_LEFT, DICE_BOTTOM - DICE_TOP, 6);
+	g.drawRoundRect(DICE_LEFT, DICE_TOP, w, DICE_BOTTOM - DICE_TOP, 6);
 	g.setColor("black");
+	if (label) {
+		g.fillRoundRect(DICE_LEFT, DICE_TOP, w, DICE_LABEL_H, 6);
+		g.fillRect(DICE_LEFT, DICE_TOP + 6, w, DICE_LABEL_H - 6);
+		g.text(fonts.small, label, TRAY_CX, DICE_TOP + 1, "center", "white");
+	}
 }
 
 // The roll result, on the hint line under the tray: the total, then any detail.
@@ -308,34 +326,32 @@ export function drawTray(g, t) {
 		return;
 	}
 	const hintY = DICE_BOTTOM + 2;
-	drawTrayBox(g);
+	const mode = roll ? roll.mode : t.mode;
+	const top = diceTop(spec, mode);
+	drawTrayBox(g, modeLabel(spec, mode));
 	if (!roll) {
-		drawDiceGrid(g, t.preview.dice, t.preview.bodies);
+		drawDiceGrid(g, t.preview.dice, t.preview.bodies, top);
 		g.text(s, t.docked ? "Undock the crank" : "Crank to roll 🎣", TRAY_CX, hintY, "center");
 		return;
 	}
 	if (roll.phase === "tumble") {
-		drawDiceGrid(g, roll.faces, roll.bodies);
+		drawDiceGrid(g, roll.faces, roll.bodies, top);
 		g.text(s, "rolling...", TRAY_CX, hintY, "center");
 		return;
 	}
 	const res = roll.result;
 	if (roll.phase === "landing") {
-		drawDiceGrid(g, res.dice, roll.bodies);
+		drawDiceGrid(g, res.dice, roll.bodies, top);
 		return;
 	}
-	drawDiceGrid(g, res.dice, roll.bodies, undefined, undefined, res);
+	drawDiceGrid(g, res.dice, roll.bodies, top, undefined, res);
 
 	let note;
 	if (res.crit) note = res.natural === 20 ? "NAT 20!" : `CRIT! (${res.natural})`;
 	else if (res.fumble) note = "NAT 1";
 	else if (res.lucky) note = "Lucky! rerolled 1";
 	else if (spec.bonus !== 0) note = `= ${res.total - spec.bonus} ${spec.bonus > 0 ? "+ " : "- "}${Math.abs(spec.bonus)}`;
-	let tag;
-	if (roll.crit) tag = "CRIT x2";
-	else if (spec.check && roll.mode === "adv") tag = "adv";
-	else if (spec.check && roll.mode === "dis") tag = "dis";
-	const detail = tag ? (note ? `${note}  ${tag}` : tag) : note;
+	const detail = roll.crit ? (note ? `${note}  CRIT x2` : "CRIT x2") : note;
 	drawResultLine(g, res.total, detail, res.crit || res.fumble, hintY);
 }
 

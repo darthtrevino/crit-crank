@@ -440,7 +440,7 @@ export class Game {
 		const [spec, crit] = this.effectiveSpec(row);
 		const faces = Dice.faces(spec);
 		const preview = this.previewFor(row);
-		const { r, xs, ys } = UI.diceLayout(faces.length);
+		const { r, xs, ys } = UI.diceLayout(faces.length, UI.diceTop(spec, s.mode));
 		const bodies = faces.map((d, i) => {
 			const b = Dice3D.newBody(d.sides);
 			const last = s.roll && s.roll.row === row && s.roll.bodies[i];
@@ -506,7 +506,7 @@ export class Game {
 		}
 		if (roll && roll.phase !== "done") {
 			const inset = UI.DICE_INSET;
-			const clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.DICE_TOP + inset, UI.DICE_RIGHT - inset, UI.DICE_BOTTOM - inset);
+			const clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.diceTop(roll.spec, roll.mode) + inset, UI.DICE_RIGHT - inset, UI.DICE_BOTTOM - inset);
 			if (clack) Sound.tick(250 + Math.random() * 150, 0.08, 0.015);
 			for (const b of roll.bodies) Dice3D.update(b);
 		}
