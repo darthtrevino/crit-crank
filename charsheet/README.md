@@ -17,7 +17,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 
 | Input | Action |
 | --- | --- |
-| ⬅️ / ➡️ | Change page (Ability, Saves, Skills, Actions, Status, Dice) |
+| ⬅️ / ➡️ | Change page (Ability, Saves, Skills, Traits, Actions, Status, Dice) |
 | ⬆️ / ⬇️ | Select a row (hold to repeat) |
 | Crank | Turn to pick up and spin the 3D dice (faster cranking = faster spin); stop and they land showing the result |
 | Ⓐ | Quick roll (for when the crank is docked) |
@@ -26,7 +26,7 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 | On the Dice page | Use "Build a pool": crank, Ⓐ or Ⓑ on a die row (d4–d20) or the Modifier changes its count; select "Roll pool" to roll it all (e.g. 2d6+1d4+2), Ⓑ there clears the pool |
 | Menu → Hero | Switch character, prebuilt or imported (remembered between launches). Each hero keeps its own page, selected row, d20 mode, pending crit, last cast and dice pool |
 | Status → Short Rest (crank to confirm) | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
-| Status → Long Rest (crank to confirm) | Full HP, all spell slots and features, regain half your Hit Dice (min 1) |
+| Status → Long Rest (crank to confirm) | Full HP, all spell slots and features, regain half your Hit Dice (min 1), remove one level of Exhaustion |
 | Menu (pause) | The left side of the pause screen explains the selected row: what the ability, save, skill, spell, feature or resource does, and how its bonus adds up (e.g. "+5 = STR +3, prof +2") |
 | Menu → Rules | Opens the selected row's full rule text in a scrolling viewer: crank or ⬆️⬇️ to scroll, Ⓐ to page, Ⓑ to close |
 
@@ -38,7 +38,8 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 - A natural 20 on any d20 roll outside the Dice page sounds a DJ air horn; a natural 1 gets a sad trombone
 - Advantage/disadvantage resets after each d20 roll
 - Halfling Lucky (Pip) automatically rerolls natural 1s on d20 rolls
-- Status page tracks current HP, Hit Dice, spell slots, and limited-use features per character (saved between launches)
+- Traits page lists fly/swim/climb/burrow speeds, senses (darkvision etc.), languages, damage and condition defenses, and armor/weapon/tool proficiencies; Ⓐ on a row opens its rule
+- Status page tracks current HP, Hit Dice, Heroic Inspiration, Exhaustion (tracked only, no automatic penalties), spell slots, and limited-use features per character (saved between launches)
 - At 0 HP the Status page shows a Dying section with a Death Save roll and success/failure counters. Death saves are tallied automatically (nat 1 = two failures, nat 20 = back to 1 HP); healing or a long rest clears them
 - Rolling a spell spends a slot of its level and rolling a limited feature spends a use. Multi-roll actions (attack + damage) spend once per cast. If none are left you get a warning, but the roll still happens.
 - Second Wind and Spend Hit Die heal your current HP when the dice land. Spend Hit Die needs a Hit Die left and missing HP.

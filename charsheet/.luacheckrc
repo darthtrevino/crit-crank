@@ -6,7 +6,7 @@ codes = true
 operators = { "+=", "-=", "*=", "/=", "%=" }
 
 globals = {
-	"playdate", "import", "json",
+	"playdate", "import", "json", "kTextAlignment",
 	-- modules shared between files
 	"UI", "Dice", "Dice3D", "Sheet", "Rules", "Characters", "Resources", "Importer",
 	"shortRest", "longRest",

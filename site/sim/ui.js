@@ -37,16 +37,23 @@ export function drawHeader(g, c, hp) {
 	g.text(fonts.small, stats, W - 6, 7, "right", "white");
 }
 
+// Tabs are as wide as their titles, sharing the leftover space evenly.
 export function drawTabs(g, pages, current) {
-	const w = W / pages.length;
+	let textTotal = 0;
+	for (const p of pages) textTotal += g.textW(fonts.small, p.title);
+	const pad = (W - textTotal) / pages.length;
+	let left = 0;
 	pages.forEach((p, i) => {
-		const x = Math.floor(i * w);
+		const w = g.textW(fonts.small, p.title) + pad;
+		const x = Math.floor(left);
+		const right = Math.floor(left + w);
 		const selected = i === current;
 		if (selected) {
 			g.setColor("black");
-			g.fillRoundRect(x + 2, TABS_Y + 2, Math.floor(w) - 4, TABS_H - 2, 4);
+			g.fillRoundRect(x + 1, TABS_Y + 2, right - x - 2, TABS_H - 2, 4);
 		}
-		g.text(fonts.small, p.title, x + Math.floor(w / 2), TABS_Y + 4, "center", selected ? "white" : "copy");
+		g.text(fonts.small, p.title, Math.floor(left + w / 2), TABS_Y + 4, "center", selected ? "white" : "copy");
+		left += w;
 	});
 	g.setColor("black");
 	g.line(0, BODY_Y - 1, W, BODY_Y - 1);
@@ -266,12 +273,19 @@ export function drawTray(g, t) {
 		return;
 	}
 
+	if (row.kind === "trait") {
+		if (row.value) g.text(fonts.body, row.value, TRAY_CX, y + 18, "center");
+		if (t.blurb) g.textInRect(s, t.blurb, TRAY_X + 4, y + 42, TRAY_W, 108, "center");
+		g.text(s, "Ⓐ read more", TRAY_CX, y + 158, "center");
+		return;
+	}
+
 	if (row.kind === "rest") {
 		g.text(s, row.detail, TRAY_CX, y + 16, "center");
 		const lines = row.key === "long"
-			? ["Full HP, spell slots", "and features, half", "your Hit Dice back"]
+			? ["Full HP, spell slots", "and features, half", "your Hit Dice back,", "-1 Exhaustion"]
 			: ["Recharge short-rest", "features, then spend", "Hit Dice to heal"];
-		lines.forEach((l, i) => g.text(s, l, TRAY_CX, y + 38 + i * 15, "center"));
+		lines.forEach((l, i) => g.text(s, l, TRAY_CX, y + 34 + i * 14, "center"));
 		const rest = t.rest;
 		const barW = TRAY_W - 16, barY = y + 100;
 		const barX = TRAY_CX - barW / 2;
@@ -341,6 +355,11 @@ export function drawFooter(g, mode, toast) {
 	}
 	if (mode === "rest") {
 		g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣 crank to rest", 6, fy);
+		return;
+	}
+	if (mode === "trait") {
+		g.text(s, "⬅️➡️ page  ⬆️⬇️ select", 6, fy);
+		g.text(s, "Ⓐ details", W - 6, fy, "right");
 		return;
 	}
 	if (mode === "resource") {

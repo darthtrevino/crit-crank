@@ -13,6 +13,7 @@
 --   resource: { kind="resource", key, label, detail }  live tracked counter
 --   counter:  { kind="counter", key, label }  custom dice pool builder entry
 --   rest:     { kind="rest", key="short"|"long", label, detail }  crank to confirm a rest
+--   trait:    { kind="trait", key, label, value, detail }  read-only, selectable to read its rule
 
 Sheet = {}
 
@@ -133,6 +134,62 @@ local function skillsPage(c)
 	return { title = "SKILLS", rows = rows }
 end
 
+-- Traits page groups, in display order: { key in c.traits, label }.
+Sheet.SPEEDS = { { "fly", "Fly" }, { "swim", "Swim" }, { "climb", "Climb" }, { "burrow", "Burrow" } }
+Sheet.SENSES = {
+	{ "darkvision", "Darkvision" }, { "blindsight", "Blindsight" },
+	{ "tremorsense", "Tremorsense" }, { "truesight", "Truesight" },
+}
+Sheet.DEFENSES = {
+	{ "resistances", "Resist" }, { "immunities", "Immune" },
+	{ "vulnerabilities", "Vulnerable" }, { "conditionImmunities", "Immune" },
+}
+Sheet.PROFICIENCIES = { { "armor", "Armor" }, { "weapons", "Weapons" }, { "tools", "Tools" } }
+
+local function traitsPage(c)
+	local t = c.traits or {}
+	local rows = {}
+	local function header(label) rows[#rows + 1] = { kind = "header", label = label } end
+	local function trait(group, key, label, value, detail)
+		rows[#rows + 1] = {
+			kind = "trait", key = group .. ":" .. key, label = label, value = value, detail = detail,
+			help = { kind = "trait", group = group, key = key },
+		}
+	end
+	for _, g in ipairs({ { "speeds", Sheet.SPEEDS, "Speeds" }, { "senses", Sheet.SENSES, "Senses" } }) do
+		local map, first = t[g[1]] or {}, true
+		for _, s in ipairs(g[2]) do
+			local ft = tonumber(map[s[1]])
+			if ft and ft > 0 then
+				if first then header(g[3]); first = false end
+				trait(g[1], s[1], s[2], ft .. " ft")
+			end
+		end
+	end
+	if t.languages and #t.languages > 0 then
+		header("Languages")
+		for _, l in ipairs(t.languages) do trait("languages", l, l) end
+	end
+	local first = true
+	for _, d in ipairs(Sheet.DEFENSES) do
+		for _, name in ipairs(t[d[1]] or {}) do
+			if first then header("Defenses"); first = false end
+			trait(d[1], name, name, d[2], d[1] == "conditionImmunities" and "condition" or nil)
+		end
+	end
+	for _, p in ipairs(Sheet.PROFICIENCIES) do
+		local list = t[p[1]] or {}
+		if #list > 0 then
+			header(p[2])
+			for _, name in ipairs(list) do trait(p[1], name, name) end
+		end
+	end
+	if #rows == 0 then
+		rows[1] = { kind = "info", label = c.imported and "Re-import to add traits" or "No traits recorded" }
+	end
+	return { title = "TRAITS", rows = rows }
+end
+
 local function actionsPage(c)
 	local rows = {}
 	local pb = Sheet.proficiency(c.level)
@@ -221,6 +278,9 @@ local function statusPage(c, dying)
 		rollKind = "heal", cost = { key = "hitDice", strict = true, each = true }, selfHeal = true,
 		actionKey = "hitDie", indent = true, help = { kind = "spendHitDie" },
 	}
+	rows[#rows + 1] = { kind = "header", label = "Condition" }
+	rows[#rows + 1] = { kind = "resource", key = "inspiration", label = "Heroic Inspiration" }
+	rows[#rows + 1] = { kind = "resource", key = "exhaustion", label = "Exhaustion" }
 	if c.slots and #c.slots > 0 then
 		rows[#rows + 1] = { kind = "header", label = "Spell Slots" }
 		for lvl in ipairs(c.slots) do
@@ -286,6 +346,7 @@ function Sheet.build(c, dying)
 		abilitiesPage(c),
 		savesPage(c),
 		skillsPage(c),
+		traitsPage(c),
 		actionsPage(c),
 		statusPage(c, dying),
 		dicePage(),

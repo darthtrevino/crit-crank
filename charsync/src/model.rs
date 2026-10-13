@@ -26,6 +26,43 @@ pub struct Character {
     pub slots: Vec<i32>,
     pub features: Vec<Feature>,
     pub actions: Vec<Action>,
+    /// TRAITS page; omitted when empty so older readers see the same file.
+    #[serde(default, skip_serializing_if = "Traits::is_empty")]
+    pub traits: Traits,
+}
+
+/// Speeds other than walking, senses, languages, defenses and proficiencies.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Traits {
+    /// fly, swim, climb, burrow -> feet
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub speeds: BTreeMap<String, i32>,
+    /// darkvision, blindsight, tremorsense, truesight -> feet
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub senses: BTreeMap<String, i32>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub languages: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub resistances: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub immunities: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub vulnerabilities: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub condition_immunities: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub armor: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub weapons: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tools: Vec<String>,
+}
+
+impl Traits {
+    pub fn is_empty(&self) -> bool {
+        *self == Traits::default()
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

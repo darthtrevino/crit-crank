@@ -65,18 +65,24 @@ function UI.drawHeader(c, hp)
 	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
+-- Tabs are as wide as their titles, sharing the leftover space evenly.
 function UI.drawTabs(pages, current)
-	local w = UI.W / #pages
+	local textTotal = 0
+	for _, p in ipairs(pages) do textTotal += textW(fonts.small, p.title) end
+	local pad = (UI.W - textTotal) / #pages
+	local left = 0
 	for i, p in ipairs(pages) do
-		local x = math.floor((i - 1) * w)
-		local selected = i == current
-		if selected then
+		local w = textW(fonts.small, p.title) + pad
+		local x = math.floor(left)
+		local right = math.floor(left + w)
+		if i == current then
 			gfx.setColor(gfx.kColorBlack)
-			gfx.fillRoundRect(x + 2, UI.TABS_Y + 2, math.floor(w) - 4, UI.TABS_H - 2, 4)
+			gfx.fillRoundRect(x + 1, UI.TABS_Y + 2, right - x - 2, UI.TABS_H - 2, 4)
 			gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
 		end
-		drawText(fonts.small, p.title, x + math.floor(w / 2), UI.TABS_Y + 4, "center")
+		drawText(fonts.small, p.title, math.floor(left + w / 2), UI.TABS_Y + 4, "center")
 		gfx.setImageDrawMode(gfx.kDrawModeCopy)
+		left += w
 	end
 	gfx.setColor(gfx.kColorBlack)
 	gfx.drawLine(0, UI.BODY_Y - 1, UI.W, UI.BODY_Y - 1)
@@ -351,13 +357,23 @@ function UI.drawTray(t)
 		return
 	end
 
+	if row.kind == "trait" then
+		if row.value then drawText(fonts.body, row.value, TRAY_CX, y + 18, "center") end
+		if t.blurb then
+			gfx.setFont(fonts.small)
+			gfx.drawTextInRect(t.blurb, UI.TRAY_X + 4, y + 42, TRAY_W, 108, nil, "…", kTextAlignment.center)
+		end
+		drawText(fonts.small, "Ⓐ read more", TRAY_CX, y + 158, "center")
+		return
+	end
+
 	if row.kind == "rest" then
 		drawText(fonts.small, row.detail, TRAY_CX, y + 16, "center")
 		local lines = row.key == "long"
-			and { "Full HP, spell slots", "and features, half", "your Hit Dice back" }
+			and { "Full HP, spell slots", "and features, half", "your Hit Dice back,", "-1 Exhaustion" }
 			or { "Recharge short-rest", "features, then spend", "Hit Dice to heal" }
 		for i, l in ipairs(lines) do
-			drawText(fonts.small, l, TRAY_CX, y + 38 + (i - 1) * 15, "center")
+			drawText(fonts.small, l, TRAY_CX, y + 34 + (i - 1) * 14, "center")
 		end
 		local rest = t.rest
 		local barW, barY = TRAY_W - 16, y + 100
@@ -443,6 +459,11 @@ function UI.drawFooter(mode, toast)
 	end
 	if mode == "rest" then
 		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣 crank to rest", 6, UI.FOOTER_Y + 2)
+		return
+	end
+	if mode == "trait" then
+		drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select", 6, UI.FOOTER_Y + 2)
+		drawText(fonts.small, "Ⓐ details", UI.W - 6, UI.FOOTER_Y + 2, "right")
 		return
 	end
 	if mode == "resource" then
