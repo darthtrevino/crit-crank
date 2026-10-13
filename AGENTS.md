@@ -45,7 +45,7 @@ CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on
 
 ## Working with the user's hardware
 
-See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`, `sound-design` (Simulator auditions and a slider tuner for sounds).
+See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`, `sound-design` (Simulator auditions and a slider tuner for sounds), `simulator-recording` (scripted Simulator GIF/MP4 attached to PRs).
 
 - **One session at a time on the Simulator.** Take the lock with `.github/skills/playdate-simulator/scripts/simlock.sh acquire` before `make run`, and release it when done. If it's busy, don't launch or kill the Simulator.
 
@@ -56,4 +56,4 @@ See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `p
 
 ## Commits
 
-Use small, focused commits with imperative subjects. PRs follow `.github/pull_request_template.md`; tick off its checklist, including the docs and docsite. Run lint, the build and the tests before committing. Agent commits include the session's `Co-authored-by` trailer.
+Use small, focused commits with imperative subjects. PRs follow `.github/pull_request_template.md`; tick off its checklist, including the docs and docsite. Every PR with an app feature or bug fix needs a Simulator recording in its Recording section (`simulator-recording` skill). Run lint, the build and the tests before committing. Agent commits include the session's `Co-authored-by` trailer.

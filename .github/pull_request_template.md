@@ -6,6 +6,10 @@
 
 <!-- Key design decisions and how the pieces fit together. -->
 
+## Recording
+
+<!-- Required for app features and bug fixes: a Simulator recording of the change (see the simulator-recording skill). Write N/A otherwise. -->
+
 ## Checklist
 
 All of these must pass before merging. Mark items that don't apply as N/A.
@@ -16,6 +20,7 @@ All of these must pass before merging. Mark items that don't apply as N/A.
 - [ ] **Docs are up to date**: `README.md`, `charsheet/README.md`, `charsync/README.md` and `AGENTS.md` describe the new behavior
 - [ ] **Docsite is up to date**: `site/index.html`, the `site/sim/` port, the `site/docs.html` manual and the screenshots in `site/assets/` match the game (preview with `cd site && python3 -m http.server`)
 - [ ] **Tested** in the Simulator or on a device (screenshots for UI changes)
+- [ ] **Simulator recording** attached under Recording for app features and bug fixes (`.github/skills/simulator-recording`)
 - [ ] New Lua globals are listed in `charsheet/.luacheckrc`
 - [ ] Character JSON changes are made in both `charsync/src/model.rs` and the game's reader, and older imported files still load
 - [ ] No secrets, `charsync/target/` or built `*.pdx` committed
