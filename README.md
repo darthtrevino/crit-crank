@@ -31,10 +31,10 @@ make run          # build with pdc and open in the Simulator
 
 To play on hardware, download `crit-crank.pdx.zip` from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest), and sideload it at [play.date/account/sideload](https://play.date/account/sideload/).
 
-To bring in a D&D Beyond character (it must be set to Public), download the matching `charsync` binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest). Make it executable on macOS/Linux, then run the command for your platform:
+To bring in a D&D Beyond character (it must be set to Public), download the matching `charsync` binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest). Make it executable on macOS/Linux (and clear the quarantine flag on macOS), then run the command for your platform:
 
 ```sh
-chmod +x charsync-macos                                              # or charsync-linux
+chmod +x charsync-macos && xattr -d com.apple.quarantine charsync-macos  # macOS; Linux: chmod +x charsync-linux
 ./charsync-linux import https://www.dndbeyond.com/characters/<id>     # Linux
 ./charsync-macos import https://www.dndbeyond.com/characters/<id>     # macOS
 .\charsync-windows.exe import https://www.dndbeyond.com/characters/<id> # Windows PowerShell
@@ -67,17 +67,6 @@ git tag v0.2.0 && git push origin v0.2.0
 ```
 
 The Release workflow sets `version` in `pdxinfo` from the tag, builds the game, and publishes a GitHub Release with `crit-crank.pdx.zip` and native `charsync` binaries for Linux, macOS and Windows attached. The site's download button always points at the latest release.
-
-The macOS `charsync` binary is signed with a Developer ID and notarized. The release fails unless these repository secrets are set:
-
-| Secret | Value |
-| --- | --- |
-| `MACOS_CERTIFICATE_P12` | Base64 of the exported Developer ID Application certificate and key (`base64 -i cert.p12`) |
-| `MACOS_CERTIFICATE_PASSWORD` | Password used when exporting the `.p12` |
-| `MACOS_SIGNING_IDENTITY` | For example `Developer ID Application: Your Name (TEAMID)` |
-| `APPSTORE_API_KEY_P8` | Contents of the App Store Connect API key `AuthKey_XXXX.p8` |
-| `APPSTORE_API_KEY_ID` | The API key ID |
-| `APPSTORE_API_ISSUER_ID` | The API issuer ID |
 
 ## License
 

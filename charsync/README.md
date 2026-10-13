@@ -6,13 +6,14 @@ Brings D&D Beyond characters into [Crit Crank](../charsheet) on a Playdate. It's
 
 ## Download
 
-Download the binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest): `charsync-linux`, `charsync-macos` or `charsync-windows.exe`. On macOS and Linux, make the downloaded binary executable, then run it from its directory:
+Download the binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest): `charsync-linux`, `charsync-macos` or `charsync-windows.exe`. On macOS and Linux, make the downloaded binary executable, then run it from its directory. The macOS binary is universal (Apple Silicon and Intel) but not notarized, so also clear the download quarantine flag or macOS will block it:
 
 ```sh
 chmod +x charsync-macos                              # or charsync-linux
+xattr -d com.apple.quarantine charsync-macos         # macOS only
 ```
 
-The macOS binary is universal (Apple Silicon and Intel), signed and notarized. The Linux binary is statically linked and runs on any x86_64 distribution.
+The Linux binary is statically linked and runs on any x86_64 distribution.
 
 ## Use
 
