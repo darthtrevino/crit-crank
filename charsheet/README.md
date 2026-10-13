@@ -20,7 +20,7 @@ To play on hardware, sideload `critcrank.pdx` (Simulator → Device → Upload G
 | ⬅️ / ➡️ | Change page (Ability, Saves, Skills, Traits, Actions, Status, Dice) |
 | ⬆️ / ⬇️ | Select a row (hold to repeat) |
 | Crank | Turn to pick up and spin the 3D dice (faster cranking = faster spin); stop and they land showing the result |
-| Ⓐ | Quick roll (for when the crank is docked) |
+| Ⓐ | Open the selected row's full rule (only the crank rolls dice) |
 | Ⓑ | Cycle the next d20 roll: normal → advantage → disadvantage |
 | Crank / Ⓐ / Ⓑ on a Status counter | Adjust it (crank clockwise = up; Ⓐ −1, Ⓑ +1) |
 | On the Dice page | Use "Build a pool": crank, Ⓐ or Ⓑ on a die row (d4–d20) or the Modifier changes its count; select "Roll pool" to roll it all (e.g. 2d6+1d4+2), Ⓑ there clears the pool |
@@ -28,7 +28,7 @@ To play on hardware, sideload `critcrank.pdx` (Simulator → Device → Upload G
 | Status → Short Rest (crank to confirm) | Restore short-rest features (Second Wind, Action Surge, Channel Divinity) |
 | Status → Long Rest (crank to confirm) | Full HP, all spell slots and features, regain half your Hit Dice (min 1), remove one level of Exhaustion |
 | Menu (pause) | The left side of the pause screen explains the selected row: what the ability, save, skill, spell, feature or resource does, and how its bonus adds up (e.g. "+5 = STR +3, prof +2") |
-| Menu → Rules | Opens the selected row's full rule text in a scrolling viewer: crank or ⬆️⬇️ to scroll, Ⓐ to page, Ⓑ to close |
+| Ⓐ or Menu → Rules | Opens the selected row's full rule text in a scrolling viewer: crank or ⬆️⬇️ to scroll, Ⓐ to page, Ⓑ to close |
 
 ## Rules handled
 

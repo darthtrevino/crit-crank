@@ -19,7 +19,6 @@ local gfx <const> = pd.graphics
 local CRANK_START = 30   -- rotation needed to pick up the dice
 local CRANK_TICK = 40    -- rotation per face change while tumbling
 local SETTLE_FRAMES = 8  -- frames of stillness before the dice land
-local AUTO_FRAMES = 16   -- length of the Ⓐ-button quick roll
 local CRANK_ADJUST = 20  -- rotation per ±1 on a resource row
 local TOAST_FRAMES = 75
 local POOL_MAX_DICE = 12
@@ -525,7 +524,7 @@ local function spinAll(amount)
 	end
 end
 
-local function startRoll(auto)
+local function startRoll()
 	local row = selectedRollRow()
 	if not row then return end
 	if row.pool and #row.spec.terms == 0 then
@@ -573,7 +572,7 @@ local function startRoll(auto)
 	end
 	state.roll = {
 		phase = "tumble", row = row, spec = spec, crit = crit, mode = state.mode,
-		faces = faces, bodies = bodies, auto = auto and AUTO_FRAMES or nil,
+		faces = faces, bodies = bodies,
 	}
 	spinAll(0.35)
 	crank.tick, crank.idle = 0, 0
@@ -653,16 +652,6 @@ local function updateRoll()
 	end
 
 	if roll and roll.phase == "tumble" then
-		if roll.auto then
-			roll.auto -= 1
-			spinAll(0.12)
-			if roll.auto % 3 == 0 then
-				roll.faces = Dice.faces(roll.spec)
-				playTick()
-			end
-			if roll.auto <= 0 then settle() end
-			return
-		end
 		if amount > 0.5 then
 			crank.idle = 0
 			spinAll(amount * 0.004)
@@ -700,7 +689,7 @@ local function updateRoll()
 		crank.windup += amount
 		if crank.windup >= CRANK_START then
 			crank.windup = 0
-			startRoll(false)
+			startRoll()
 		end
 	else
 		crank.idle += 1
@@ -751,18 +740,15 @@ local function traitRow()
 	return row and row.kind == "trait"
 end
 
+-- Only the crank rolls; Ⓐ explains the row (or takes one off a counter).
 function pd.AButtonDown()
-	if diceMoving() or restHint() then return end
-	if traitRow() then
-		openRules()
-		return
-	end
+	if diceMoving() then return end
 	local r = resourceRow()
 	if r then
 		holdRepeat("a", function() adjustRow(r, -1) end)
 		return
 	end
-	startRoll(true)
+	if selectedRow() then openRules() end
 end
 function pd.AButtonUp() release("a") end
 
