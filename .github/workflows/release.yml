@@ -69,6 +69,56 @@ jobs:
               file "$out"
               ;;
           esac
+      - name: Sign and notarize macOS binary
+        if: runner.os == 'macOS'
+        env:
+          CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+        run: |
+          for v in CERTIFICATE_P12 CERTIFICATE_PASSWORD SIGNING_IDENTITY API_KEY_P8 API_KEY_ID API_ISSUER_ID; do
+            [ -n "${!v}" ] || { echo "::error::Missing secret for $v"; exit 1; }
+          done
+          out="../dist/${{ matrix.asset }}"
+          work="$RUNNER_TEMP/signing"
+          mkdir -p "$work"
+          keychain="$work/build.keychain-db"
+          keychain_pw="$(uuidgen)"
+
+          echo "$CERTIFICATE_P12" | base64 --decode > "$work/cert.p12"
+          security create-keychain -p "$keychain_pw" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_pw" "$keychain"
+          security import "$work/cert.p12" -k "$keychain" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_pw" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+
+          codesign --force --timestamp --options runtime \
+            --identifier com.christrevino.charsync \
+            --keychain "$keychain" --sign "$SIGNING_IDENTITY" "$out"
+          codesign --verify --strict --verbose=2 "$out"
+
+          # Bare executables can't be stapled; Gatekeeper fetches the
+          # notarization ticket online on first launch.
+          echo "$API_KEY_P8" > "$work/AuthKey.p8"
+          ditto -c -k "$out" "$work/charsync.zip"
+          auth=(--key "$work/AuthKey.p8" --key-id "$API_KEY_ID" --issuer "$API_ISSUER_ID")
+          result="$(xcrun notarytool submit "$work/charsync.zip" "${auth[@]}" \
+            --wait --timeout 30m --output-format json)"
+          echo "$result"
+          status="$(plutil -extract status raw - <<< "$result")"
+          if [ "$status" != "Accepted" ]; then
+            id="$(plutil -extract id raw - <<< "$result")"
+            xcrun notarytool log "$id" "${auth[@]}" || true
+            echo "::error::Notarization failed: $status"
+            exit 1
+          fi
+
+          security delete-keychain "$keychain"
+          rm -rf "$work"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}

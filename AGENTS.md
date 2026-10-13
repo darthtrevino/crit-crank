@@ -25,7 +25,7 @@ Guidance for AI coding agents working on Crit Crank. Read this before you change
 | Rust | `cd charsync && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
 | Site preview | `cd site && python3 -m http.server` |
 
-CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on PRs and on `main`. Keep all of them green. `pages.yml` deploys `site/` as-is. `release.yml` runs on a `v*` tag: it stamps the version into `pdxinfo`, builds, and attaches `crit-crank.pdx.zip` plus Linux, macOS and Windows `charsync` binaries to a GitHub Release. The site links to `releases/latest/download/crit-crank.pdx.zip`.
+CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on PRs and on `main`. Keep all of them green. `pages.yml` deploys `site/` as-is. `release.yml` runs on a `v*` tag: it stamps the version into `pdxinfo`, builds, and attaches `crit-crank.pdx.zip` plus Linux (static musl), macOS (universal, signed and notarized; needs the secrets listed in README) and Windows `charsync` binaries to a GitHub Release. The site links to `releases/latest/download/crit-crank.pdx.zip`.
 
 ## Invariants
 
