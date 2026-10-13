@@ -814,7 +814,7 @@ export class Game {
 			parts.push(`${row.label}${value ? " " + value : ""}`);
 		}
 		if (row && row.critable && s.critPending) parts.push("Critical");
-		else if (s.mode !== "normal" && !(row && row.spec && !row.spec.check)) parts.push(s.mode === "adv" ? "Advantage" : "Disadvantage");
+		else if (s.mode !== "normal" && row && row.spec && row.spec.check) parts.push(s.mode === "adv" ? "Advantage" : "Disadvantage");
 		const roll = s.roll;
 		if (roll && roll.phase === "done") {
 			const r = roll.result;
