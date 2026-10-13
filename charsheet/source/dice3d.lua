@@ -458,6 +458,45 @@ local function drawLabel(font, s, x, y)
 	gfx.drawText(s, math.floor(x - w / 2), math.floor(y - font:getHeight() / 2))
 end
 
+-- Pre-rendered label images, per font, for drawing rotated numbers.
+local labelImages = setmetatable({}, { __mode = "k" })
+
+local function labelImage(font, s)
+	local byFont = labelImages[font]
+	if not byFont then
+		byFont = {}
+		labelImages[font] = byFont
+	end
+	local img = byFont[s]
+	if not img then
+		img = gfx.image.new(font:getTextWidth(s), font:getHeight())
+		gfx.pushContext(img)
+		gfx.setFont(font)
+		gfx.drawText(s, 0, 0)
+		gfx.popContext()
+		byFont[s] = img
+	end
+	return img
+end
+
+-- A face's "up" in die space: the direction that points up the screen when
+-- the die rests on that face. restAngle is its leftover on-screen angle at
+-- rest (from the tilt), so resting labels draw exactly upright.
+local function faceUp(sides, f)
+	if f.up then return f.up, f.restAngle end
+	local n = f.n
+	local tilt = (sides == 4) and REST_TILT_D4 or REST_TILT
+	local m = qMatrix(qMul(tilt, qFaceToViewer(n[1], n[2], n[3])))
+	-- inverse rotation of screen up (0, 1, 0) is the matrix's second column
+	local ux, uy, uz = m[2], m[5], m[8]
+	local d = ux * n[1] + uy * n[2] + uz * n[3]
+	ux, uy, uz = norm(ux - d * n[1], uy - d * n[2], uz - d * n[3])
+	local sx = m[1] * ux + m[2] * uy + m[3] * uz
+	local sy = m[4] * ux + m[5] * uy + m[6] * uz
+	f.up, f.restAngle = { ux, uy, uz }, atan(sx, sy)
+	return f.up, f.restAngle
+end
+
 -- style: "normal" | "dropped" | "hot"
 function Dice3D.draw(body, cx, cy, r, label, style, font)
 	local solid = solidFor(body.sides)
@@ -526,8 +565,18 @@ function Dice3D.draw(body, cx, cy, r, label, style, font)
 		end
 		fx /= #frontFace.idx
 		fy /= #frontFace.idx
+		-- turn the number with the face it sits on (degrees clockwise)
+		local u, restAngle = faceUp(body.sides, frontFace)
+		local sx = m[1] * u[1] + m[2] * u[2] + m[3] * u[3]
+		local sy = m[4] * u[1] + m[5] * u[2] + m[6] * u[3]
+		local angle = math.deg(atan(sx, sy) - restAngle)
+		angle = (angle + 180) % 360 - 180
 		if style == "hot" then gfx.setImageDrawMode(gfx.kDrawModeFillWhite) end
-		drawLabel(font, tostring(label), fx, fy)
+		if math.abs(angle) < 1 then
+			drawLabel(font, tostring(label), fx, fy)
+		else
+			labelImage(font, tostring(label)):drawRotated(fx, fy, angle)
+		end
 		gfx.setImageDrawMode(gfx.kDrawModeCopy)
 	end
 
