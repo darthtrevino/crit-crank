@@ -106,9 +106,8 @@
 
 		<section aria-labelledby="sync-title">
 			<h2 id="sync-title">Bring your own character</h2>
-			<p><b>charsync</b> is a small command-line tool for Mac, Windows and Linux. Download the binary for your system from the <a href="https://github.com/darthtrevino/crit-crank/releases/latest">latest release</a>. It turns a public D&amp;D Beyond character into a Crit Crank hero and sends it to your Playdate over USB. Run <code>./charsync-macos</code> on macOS, <code>./charsync-linux</code> on Linux, or <code>.\charsync-windows.exe</code> in Windows PowerShell. On macOS and Linux, make it executable first; on macOS also clear the download quarantine:</p>
+			<p><b>charsync</b> is a small command-line tool for Mac, Windows and Linux. Download the binary for your system from the <a href="https://github.com/darthtrevino/crit-crank/releases/latest">latest release</a>. It turns a public D&amp;D Beyond character into a Crit Crank hero and sends it to your Playdate over USB. Run <code>./charsync-macos</code> on macOS, <code>./charsync-linux</code> on Linux, or <code>.\charsync-windows.exe</code> in Windows PowerShell. On macOS and Linux, make it executable first:</p>
 <pre><code>chmod +x charsync-macos
-xattr -d com.apple.quarantine charsync-macos
 ./charsync-macos import https://www.dndbeyond.com/characters/12345678</code></pre>
 			<p>It converts ability scores, saves, skills, HP, AC, spell slots, weapons, damage and healing spells, and limited-use features. Spell and feature descriptions show up on the pause screen and in the Rules viewer too. See the <a href="https://github.com/darthtrevino/crit-crank/tree/main/charsync">charsync README</a>.</p>
 		</section>
