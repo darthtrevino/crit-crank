@@ -32,7 +32,7 @@ const STORE_KEY = "critcrank-sim-v1";
 
 CHARACTERS.forEach((c, i) => { c.key = String(i + 1); });
 
-const isSelectable = (row) => row && ["roll", "resource", "counter", "rest"].includes(row.kind);
+const isSelectable = (row) => row && ["roll", "resource", "counter", "rest", "trait"].includes(row.kind);
 const firstSelectable = (rows) => Math.max(0, rows.findIndex(isSelectable));
 const rowId = (row) => row && `${row.kind}:${row.key || row.actionKey || ""}:${row.label || ""}`;
 
@@ -135,6 +135,7 @@ export class Game {
 			s.dirty = true;
 			Sound.tick(delta > 0 ? 900 : 500, 0.1, 0.02);
 			if (key === "hp") this.syncDying();
+			if (key === "exhaustion" && after === 6) this.toast("Exhaustion 6: you die");
 		}
 	}
 
@@ -365,10 +366,10 @@ export class Game {
 		const c = this.character;
 		s.lastCast = null;
 		if (kind === "long") {
-			const regained = Resources.longRest(c, s.res);
+			const [regained, rested] = Resources.longRest(c, s.res);
 			s.critPending = false;
 			this.syncDying();
-			this.toast(`Long rest: fully restored, +${regained} Hit Dice`);
+			this.toast(`Long rest: fully restored, +${regained} Hit Dice${rested > 0 ? ", -1 Exhaustion" : ""}`);
 		} else {
 			const restored = Resources.shortRest(c, s.res);
 			this.toast(restored.length ? `Short rest: ${restored.join(", ")} restored` : "Short rest: spend Hit Dice to heal");
@@ -690,8 +691,14 @@ export class Game {
 		return row && (row.kind === "resource" || row.kind === "counter") ? row : null;
 	}
 
+	traitRow() {
+		const row = this.selectedRow();
+		return !!row && row.kind === "trait";
+	}
+
 	pressA() {
 		if (this.diceMoving() || this.restHint()) return;
+		if (this.traitRow()) { this.openRules(); return; }
 		const r = this.resourceRow();
 		if (r) { this.holdRepeat("a", () => this.adjustRow(r, -1)); return; }
 		this.startRoll(true);
@@ -699,7 +706,7 @@ export class Game {
 
 	pressB() {
 		const s = this.state;
-		if (this.diceMoving() || this.restHint()) return;
+		if (this.diceMoving() || this.restHint() || this.traitRow()) return;
 		const r = this.resourceRow();
 		if (r) { this.holdRepeat("b", () => this.adjustRow(r, 1)); return; }
 		const sel = this.selectedRow();
@@ -781,6 +788,9 @@ export class Game {
 		if (row && row.kind === "roll" && !(row.pool && row.spec.terms.length === 0)) {
 			[tray.spec] = this.effectiveSpec(row);
 			tray.preview = this.previewFor(row);
+		} else if (row && row.kind === "trait") {
+			if (!row.blurb) row.blurb = Rules.describe(c, row, page).body || "";
+			tray.blurb = row.blurb;
 		} else if (row && row.kind === "counter") {
 			const poolRow = page.rows.find((r) => r.pool);
 			if (poolRow.spec.terms.length > 0) {
@@ -792,6 +802,7 @@ export class Game {
 		let footerMode = s.mode;
 		if (row && (row.kind === "resource" || row.kind === "counter")) footerMode = "resource";
 		else if (row && row.kind === "rest") footerMode = "rest";
+		else if (row && row.kind === "trait") footerMode = "trait";
 		else if (row && row.pool) footerMode = "pool";
 		else if (row && row.spec && !row.spec.check) footerMode = !row.critable ? "plain" : s.critPending ? "crit" : "dmg";
 		UI.drawFooter(g, footerMode, s.toast);

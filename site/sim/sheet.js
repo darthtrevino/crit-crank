@@ -93,6 +93,59 @@ function skillsPage(c) {
 	return { title: "SKILLS", rows };
 }
 
+// Traits page groups, in display order: [key in c.traits, label].
+export const SPEEDS = [["fly", "Fly"], ["swim", "Swim"], ["climb", "Climb"], ["burrow", "Burrow"]];
+export const SENSES = [
+	["darkvision", "Darkvision"], ["blindsight", "Blindsight"],
+	["tremorsense", "Tremorsense"], ["truesight", "Truesight"],
+];
+export const DEFENSES = [
+	["resistances", "Resist"], ["immunities", "Immune"],
+	["vulnerabilities", "Vulnerable"], ["conditionImmunities", "Immune"],
+];
+export const PROFICIENCIES = [["armor", "Armor"], ["weapons", "Weapons"], ["tools", "Tools"]];
+
+function traitsPage(c) {
+	const t = c.traits || {};
+	const rows = [];
+	const header = (label) => rows.push({ kind: "header", label });
+	const trait = (group, key, label, value, detail) => rows.push({
+		kind: "trait", key: group + ":" + key, label, value, detail,
+		help: { kind: "trait", group, key },
+	});
+	for (const [group, list, title] of [["speeds", SPEEDS, "Speeds"], ["senses", SENSES, "Senses"]]) {
+		const map = t[group] || {};
+		let first = true;
+		for (const [key, label] of list) {
+			const ft = Number(map[key]);
+			if (ft > 0) {
+				if (first) { header(title); first = false; }
+				trait(group, key, label, ft + " ft");
+			}
+		}
+	}
+	if (t.languages && t.languages.length) {
+		header("Languages");
+		for (const l of t.languages) trait("languages", l, l);
+	}
+	let first = true;
+	for (const [group, value] of DEFENSES) {
+		for (const name of t[group] || []) {
+			if (first) { header("Defenses"); first = false; }
+			trait(group, name, name, value, group === "conditionImmunities" ? "condition" : undefined);
+		}
+	}
+	for (const [group, label] of PROFICIENCIES) {
+		const list = t[group] || [];
+		if (list.length) {
+			header(label);
+			for (const name of list) trait(group, name, name);
+		}
+	}
+	if (!rows.length) rows.push({ kind: "info", label: c.imported ? "Re-import to add traits" : "No traits recorded" });
+	return { title: "TRAITS", rows };
+}
+
 function actionsPage(c) {
 	const rows = [];
 	const pb = proficiency(c.level);
@@ -163,6 +216,9 @@ function statusPage(c, isDying) {
 		rollKind: "heal", cost: { key: "hitDice", strict: true, each: true }, selfHeal: true,
 		actionKey: "hitDie", indent: true, help: { kind: "spendHitDie" },
 	});
+	rows.push({ kind: "header", label: "Condition" });
+	rows.push({ kind: "resource", key: "inspiration", label: "Heroic Inspiration" });
+	rows.push({ kind: "resource", key: "exhaustion", label: "Exhaustion" });
 	if (c.slots && c.slots.length) {
 		rows.push({ kind: "header", label: "Spell Slots" });
 		c.slots.forEach((_, i) => rows.push({ kind: "resource", key: "slot" + (i + 1), label: "Level " + (i + 1) }));
@@ -198,5 +254,5 @@ function dicePage() {
 }
 
 export function build(c, isDying) {
-	return [abilitiesPage(c), savesPage(c), skillsPage(c), actionsPage(c), statusPage(c, isDying), dicePage()];
+	return [abilitiesPage(c), savesPage(c), skillsPage(c), traitsPage(c), actionsPage(c), statusPage(c, isDying), dicePage()];
 }

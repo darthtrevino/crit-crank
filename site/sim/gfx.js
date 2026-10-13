@@ -374,15 +374,16 @@ export class Gfx {
 		return this.wrap(font, text, w).length * font.height;
 	}
 
-	// Like gfx.drawTextInRect with "…" truncation.
-	textInRect(font, text, x, y, w, h) {
+	// Like gfx.drawTextInRect with "…" truncation; align is "left" (default) or "center".
+	textInRect(font, text, x, y, w, h, align) {
 		const lines = this.wrap(font, text, w);
 		const max = Math.max(1, Math.floor(h / font.height));
 		if (lines.length > max) {
 			lines.length = max;
 			lines[max - 1] = this.fit(font, lines[max - 1] + "…", w);
 		}
-		lines.forEach((l, i) => this.text(font, l, x, y + i * font.height));
+		const lx = align === "center" ? x + w / 2 : x;
+		lines.forEach((l, i) => this.text(font, l, lx, y + i * font.height, align));
 	}
 
 	// ------------------------------------------------------------ output
