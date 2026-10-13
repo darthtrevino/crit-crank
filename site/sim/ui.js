@@ -164,11 +164,13 @@ function drawPill(g, text, cx, y) {
 	g.text(fonts.small, text, cx, y + 1, "center", "white");
 }
 
-// The tray box the dice bounce around in: the whole panel above the hint line.
+// The space the dice rest in: the whole panel above the hint line. While they
+// roll the hint line is hidden and they may roam down to DICE_FLOOR.
 export const DICE_LEFT = TRAY_X + 1;
 export const DICE_RIGHT = W - 3;
 export const DICE_TOP = BODY_Y + 3;
 export const DICE_BOTTOM = FOOTER_Y - 20;
+export const DICE_FLOOR = FOOTER_Y - 1;
 export const DICE_INSET = 2;
 export const DICE_LABEL_H = 15;
 const DIE_REACH = 1.15; // the widest solid (d4) reaches 1.15 r from its centre
@@ -206,22 +208,17 @@ export function modeLabel(spec, mode) {
 	return mode === "adv" ? "ADVANTAGE" : mode === "dis" ? "DISADVANTAGE" : null;
 }
 
-// Top of the space the dice move in: below the mode label when one is docked.
+// Top of the space the dice move in: below the mode label when one is shown.
 export function diceTop(spec, mode) {
-	return DICE_TOP + (modeLabel(spec, mode) ? DICE_LABEL_H : 0);
+	return modeLabel(spec, mode) ? BODY_Y + DICE_LABEL_H : DICE_TOP;
 }
 
-function drawTrayBox(g, label) {
-	const w = DICE_RIGHT - DICE_LEFT;
+// The mode label: a bar across the top of the tray panel.
+function drawModeLabel(g, label) {
+	if (!label) return;
 	g.setColor("black");
-	g.setDither(0.5, "bayer2");
-	g.drawRoundRect(DICE_LEFT, DICE_TOP, w, DICE_BOTTOM - DICE_TOP, 6);
-	g.setColor("black");
-	if (label) {
-		g.fillRoundRect(DICE_LEFT, DICE_TOP, w, DICE_LABEL_H, 6);
-		g.fillRect(DICE_LEFT, DICE_TOP + 6, w, DICE_LABEL_H - 6);
-		g.text(fonts.small, label, TRAY_CX, DICE_TOP + 1, "center", "white");
-	}
+	g.fillRect(TRAY_X - 2, BODY_Y, W - TRAY_X + 2, DICE_LABEL_H);
+	g.text(fonts.small, label, TRAY_CX, BODY_Y + 1, "center", "white");
 }
 
 // The roll result, on the hint line under the tray: the total, then any detail.
@@ -328,7 +325,7 @@ export function drawTray(g, t) {
 	const hintY = DICE_BOTTOM + 2;
 	const mode = roll ? roll.mode : t.mode;
 	const top = diceTop(spec, mode);
-	drawTrayBox(g, modeLabel(spec, mode));
+	drawModeLabel(g, modeLabel(spec, mode));
 	if (!roll) {
 		drawDiceGrid(g, t.preview.dice, t.preview.bodies, top);
 		g.text(s, t.docked ? "Undock the crank" : "Crank to roll 🎣", TRAY_CX, hintY, "center");
@@ -336,7 +333,6 @@ export function drawTray(g, t) {
 	}
 	if (roll.phase === "tumble") {
 		drawDiceGrid(g, roll.faces, roll.bodies, top);
-		g.text(s, "rolling...", TRAY_CX, hintY, "center");
 		return;
 	}
 	const res = roll.result;
