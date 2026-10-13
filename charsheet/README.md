@@ -46,14 +46,13 @@ To play on hardware, sideload `charsheet.pdx` (Simulator → Device → Upload G
 
 ## Importing D&D Beyond characters
 
-The [`charsync`](../charsync) desktop tool (Rust, macOS/Windows/Linux) downloads a **public** D&D Beyond character, converts it, and sends it to the Playdate over USB while Crit Crank is running:
+The [`charsync`](../charsync) desktop tool (macOS/Windows/Linux) downloads a **public** D&D Beyond character, converts it, and sends it to the Playdate over USB while Crit Crank is running. Download the binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest), then run it:
 
 ```sh
-cd charsync && cargo build --release
-./target/release/charsync import https://www.dndbeyond.com/characters/27935516
+./charsync-macos import https://www.dndbeyond.com/characters/27935516
 ```
 
-The hero is selected straight away and stays in the Hero menu. Importing the same character again updates it (its HP, slots and uses are kept). See [charsync/README.md](../charsync/README.md) for the other options (Simulator, USB disk mode, removing a hero).
+On Linux use `./charsync-linux`; on Windows use `.\charsync-windows.exe`. On macOS and Linux, make the downloaded binary executable first. The hero is selected straight away and stays in the Hero menu. Importing the same character again updates it (its HP, slots and uses are kept). See [charsync/README.md](../charsync/README.md) for the other options (Simulator, USB disk mode, removing a hero).
 
 ## Code layout
 
