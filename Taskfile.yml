@@ -1,0 +1,94 @@
+# Common development tasks. Install Task from https://taskfile.dev, then run `task --list`.
+version: '3'
+
+vars:
+  SIMLOCK: .github/skills/playdate-simulator/scripts/simlock.sh
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  lint:
+    desc: Lint the game's Lua with luacheck (Lua 5.4; set LUACHECK to override)
+    cmds:
+      - charsheet/tools/lint.sh
+
+  build:
+    desc: Build charsheet.pdx with pdc
+    dir: charsheet
+    cmds:
+      - make build
+    sources:
+      - source/**/*
+    generates:
+      - charsheet.pdx/pdxinfo
+
+  clean:
+    desc: Remove the built charsheet.pdx
+    dir: charsheet
+    cmds:
+      - make clean
+
+  sim:
+    desc: Take the Simulator lock, build, and launch the game in the Simulator
+    cmds:
+      - '{{.SIMLOCK}} acquire'
+      - task: build
+      - cd charsheet && make run
+
+  sim:stop:
+    desc: Quit the Simulator and release the lock
+    cmds:
+      - osascript -e 'quit app "Playdate Simulator"' || true
+      - '{{.SIMLOCK}} release'
+
+  sim:status:
+    desc: Show who holds the Simulator lock
+    cmds:
+      - '{{.SIMLOCK}} status'
+
+  device:
+    desc: Build and deploy to a USB-connected Playdate, then launch it (quit the Simulator first)
+    deps: [build]
+    cmds:
+      - charsheet/tools/deploy-device.sh
+
+  device:screen:
+    desc: 'Save a screenshot from the device (task device:screen -- out.png)'
+    cmds:
+      - python3 .github/skills/playdate-device/scripts/pdserial.py --screen {{.CLI_ARGS | default "/tmp/playdate.png"}}
+
+  rust:
+    desc: Run charsync's fmt check, clippy and tests
+    dir: charsync
+    cmds:
+      - cargo fmt --check
+      - cargo clippy --all-targets -- -D warnings
+      - cargo test
+
+  rust:fmt:
+    desc: Format charsync's Rust code
+    dir: charsync
+    cmds:
+      - cargo fmt
+
+  charsync:
+    desc: 'Run the charsync CLI (task charsync -- import <id>)'
+    dir: charsync
+    cmds:
+      - cargo run --quiet -- {{.CLI_ARGS}}
+
+  site:
+    desc: Serve the docsite at http://localhost:8000
+    dir: site
+    cmds:
+      - python3 -m http.server 8000
+
+  check:
+    desc: Run every CI check (lint, build, Rust)
+    cmds:
+      - task: lint
+      - task: build
+      - task: rust

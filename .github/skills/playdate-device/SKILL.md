@@ -11,6 +11,7 @@ description: Deploy Crit Crank to a USB-connected Playdate, drive it with button
 - Only one process can hold the port at a time. Quit the Simulator and stop any `pdutil` or `charsync` sessions first.
 
 ## Deploy a build
+`task device` (or `charsheet/tools/deploy-device.sh` after a build) does all of this. The manual steps:
 ```sh
 cd charsheet && make build
 P=$(ls /dev/cu.usbmodemPD* | head -1); PDUTIL=~/Developer/PlaydateSDK/bin/pdutil

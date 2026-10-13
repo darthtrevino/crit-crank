@@ -17,15 +17,18 @@ Guidance for AI coding agents working on Crit Crank. Read this before you change
 
 ## Commands
 
+A root `Taskfile.yml` wraps these (`task check`, `task sim`, `task device`, …; see `task --list`).
+
 | Task | Command |
 | --- | --- |
 | Build game | `cd charsheet && make build` (or `pdc source charsheet.pdx`) |
-| Run in Simulator | `cd charsheet && make run` |
+| Run in Simulator | `cd charsheet && make run` (or `task sim`, which takes the lock) |
+| Deploy to device | `task device` (`charsheet/tools/deploy-device.sh`) |
 | Lua lint | `charsheet/tools/lint.sh` (needs `luacheck` on **Lua 5.4**; it crashes on 5.5. Set `LUACHECK=` to point at the binary) |
 | Rust | `cd charsync && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test` |
 | Site preview | `cd site && python3 -m http.server` |
 
-CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on PRs and on `main`. Keep all of them green. `pages.yml` deploys `site/` as-is. `release.yml` runs on a `v*` tag: it stamps the version into `pdxinfo`, builds, and attaches `crit-crank.pdx.zip` to a GitHub Release. The site links to `releases/latest/download/crit-crank.pdx.zip`.
+CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on PRs and on `main`. Keep all of them green. `pages.yml` deploys `site/` as-is. `release.yml` runs on a `v*` tag: it stamps the version into `pdxinfo`, builds, and attaches `crit-crank.pdx.zip` plus Linux, macOS and Windows `charsync` binaries to a GitHub Release. The site links to `releases/latest/download/crit-crank.pdx.zip`.
 
 ## Invariants
 
@@ -45,7 +48,7 @@ CI (`.github/workflows/ci.yml`) runs lint, the game build and the Rust checks on
 
 ## Working with the user's hardware
 
-See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`, `sound-design` (Simulator auditions and a slider tuner for sounds).
+See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `playdate-simulator-harness`, `charsync-import`, `one-bit-assets`, `sound-design` (Simulator auditions and a slider tuner for sounds), `simulator-recording` (scripted Simulator GIF/MP4 attached to PRs).
 
 - **One session at a time on the Simulator.** Take the lock with `.github/skills/playdate-simulator/scripts/simlock.sh acquire` before `make run`, and release it when done. If it's busy, don't launch or kill the Simulator.
 
@@ -56,4 +59,4 @@ See the skills in `.github/skills/`: `playdate-simulator`, `playdate-device`, `p
 
 ## Commits
 
-Use small, focused commits with imperative subjects. PRs follow `.github/pull_request_template.md`; tick off its checklist, including the docs and docsite. Run lint, the build and the tests before committing. Agent commits include the session's `Co-authored-by` trailer.
+Use small, focused commits with imperative subjects. PRs follow `.github/pull_request_template.md`; tick off its checklist, including the docs and docsite. Every PR with an app feature or bug fix needs a Simulator recording in its Recording section (`simulator-recording` skill). Run lint, the build and the tests before committing. Agent commits include the session's `Co-authored-by` trailer.

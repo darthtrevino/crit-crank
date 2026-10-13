@@ -766,8 +766,14 @@ function pd.BButtonDown()
 		clearPool()
 		return
 	end
-	local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
-	state.mode = nextMode[state.mode]
+	if sel and sel.spec and not sel.spec.check then
+		-- damage rolls toggle normal / critical instead of the d20 mode
+		if not sel.critable then return end
+		state.critPending = not state.critPending
+	else
+		local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
+		state.mode = nextMode[state.mode]
+	end
 	state.dirty = true
 	if state.roll then state.roll = nil end
 end
@@ -806,7 +812,6 @@ local rulesInput = {
 		if v and v.target >= rulesMaxScroll(v) then closeRules() else scrollRules(UI.RULES_BODY_H - RULES_LINE) end
 	end,
 	BButtonDown = closeRules,
-	cranked = function(change) scrollRules(change * RULES_CRANK) end,
 }
 
 local function openRules()
@@ -914,7 +919,7 @@ local function buildMenu()
 			end
 		end
 	end)
-	menu:addMenuItem("Rules", openRules)
+	menu:addMenuItem("Read Rule", openRules)
 end
 
 local function shortRest()
@@ -986,7 +991,8 @@ function pd.update()
 	pd.timer.updateTimers()
 	local rulesY
 	if state.rules then
-		pd.getCrankChange() -- the viewer owns the crank; don't let it wind up a roll
+		-- The viewer owns the crank: it scrolls the text instead of winding up a roll.
+		scrollRules(pd.getCrankChange() * RULES_CRANK)
 		rulesY = updateRules()
 	else
 		updateRoll()
@@ -1041,6 +1047,8 @@ function pd.update()
 		footerMode = "rest"
 	elseif row and row.pool then
 		footerMode = "pool"
+	elseif row and row.spec and not row.spec.check then
+		footerMode = not row.critable and "plain" or (state.critPending and "crit" or "dmg")
 	end
 	UI.drawFooter(footerMode, state.toast)	if rulesY then UI.drawRuleViewer(state.rules, rulesY) end
 end

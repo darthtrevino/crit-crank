@@ -4,21 +4,30 @@ Brings D&D Beyond characters into [Crit Crank](../charsheet) on a Playdate. It's
 
 > D&D Beyond has no public API. charsync reads the same unofficial JSON feed the D&D Beyond site uses, which works only for characters whose privacy is set to **Public**. It may break if D&D Beyond changes the feed. Use it for your own characters.
 
-## Build
+## Download
 
-Requires [Rust](https://rustup.rs).
+Download the binary for your operating system from the [latest release](https://github.com/darthtrevino/crit-crank/releases/latest): `charsync-linux`, `charsync-macos` or `charsync-windows.exe`. On macOS and Linux, make the downloaded binary executable, then run it from its directory. The macOS binary is universal (Apple Silicon and Intel) but not notarized, so also clear the download quarantine flag or macOS will block it:
 
 ```sh
-cargo build --release   # -> target/release/charsync
+chmod +x charsync-macos                              # or charsync-linux
+xattr -d com.apple.quarantine charsync-macos         # macOS only
 ```
+
+The Linux binary is statically linked and runs on any x86_64 distribution.
 
 ## Use
 
 Open Crit Crank on the Playdate, plug it in over USB, unlock it, then:
 
 ```sh
-charsync import 27935516                                     # by id
-charsync import https://www.dndbeyond.com/characters/27935516 # or URL
+./charsync-macos import 27935516                                     # use charsync-linux on Linux
+./charsync-macos import https://www.dndbeyond.com/characters/27935516
+```
+
+On Windows, run the downloaded executable in PowerShell:
+
+```powershell
+.\charsync-windows.exe import 27935516
 ```
 
 charsync launches Crit Crank if it isn't already open. Other commands:

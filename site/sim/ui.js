@@ -337,8 +337,9 @@ export function drawFooter(g, mode, toast) {
 		g.text(s, "Ⓐ -1  Ⓑ +1", W - 6, fy, "right");
 		return;
 	}
-	const modeText = mode === "adv" ? "ADV" : mode === "dis" ? "DIS" : "normal";
 	g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, fy);
+	if (mode === "plain") return;
+	const modeText = mode === "adv" ? "ADV" : mode === "dis" ? "DIS" : mode === "crit" ? "CRIT" : "normal";
 	g.text(s, "Ⓑ " + modeText, W - 6, fy, "right");
 }
 
@@ -367,7 +368,7 @@ export function drawRuleCard(g, title, sub, body) {
 	if (g.textHeight(font, body, CW) > h) {
 		h -= 18;
 		g.fillRect(0, 222, 199, 18);
-		g.text(fonts.small, g.fit(fonts.small, "More: Rules in menu", CW), X, 224, undefined, "white");
+		g.text(fonts.small, g.fit(fonts.small, "More: Read Rule in menu", CW), X, 224, undefined, "white");
 	}
 	g.textInRect(font, body, X, y, CW, h);
 	g.setColor("black");
