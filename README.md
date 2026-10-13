@@ -9,7 +9,7 @@ A D&D 5e character sheet for [Playdate](https://play.date). Pick an ability, sav
 
 **[Try the browser demo →](https://darthtrevino.github.io/crit-crank/)** · **[Read the manual →](https://darthtrevino.github.io/crit-crank/docs.html)**
 
-![Rolling a natural 20](site/assets/nat20.gif)
+![Cranking an Athletics check with advantage to a natural 20](site/assets/nat20.gif)
 
 ## What's in here
 
