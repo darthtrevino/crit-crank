@@ -418,8 +418,10 @@ function UI.drawFooter(mode, toast)
 		drawText(fonts.small, "Ⓐ -1  Ⓑ +1", UI.W - 6, UI.FOOTER_Y + 2, "right")
 		return
 	end
-	local modeText = (mode == "adv" and "ADV") or (mode == "dis" and "DIS") or "normal"
 	drawText(fonts.small, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, UI.FOOTER_Y + 2)
+	if mode == "plain" then return end
+	local modeText = (mode == "adv" and "ADV") or (mode == "dis" and "DIS")
+		or (mode == "crit" and "CRIT") or "normal"
 	drawText(fonts.small, "Ⓑ " .. modeText, UI.W - 6, UI.FOOTER_Y + 2, "right")
 end
 
