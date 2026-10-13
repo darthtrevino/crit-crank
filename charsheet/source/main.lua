@@ -749,8 +749,14 @@ function pd.BButtonDown()
 		clearPool()
 		return
 	end
-	local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
-	state.mode = nextMode[state.mode]
+	if sel and sel.spec and not sel.spec.check then
+		-- damage rolls toggle normal / critical instead of the d20 mode
+		if not sel.critable then return end
+		state.critPending = not state.critPending
+	else
+		local nextMode = { normal = "adv", adv = "dis", dis = "normal" }
+		state.mode = nextMode[state.mode]
+	end
 	state.dirty = true
 	if state.roll then state.roll = nil end
 end
@@ -1024,6 +1030,8 @@ function pd.update()
 		footerMode = "rest"
 	elseif row and row.pool then
 		footerMode = "pool"
+	elseif row and row.spec and not row.spec.check then
+		footerMode = not row.critable and "plain" or (state.critPending and "crit" or "dmg")
 	end
 	UI.drawFooter(footerMode, state.toast)	if rulesY then UI.drawRuleViewer(state.rules, rulesY) end
 end

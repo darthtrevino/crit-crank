@@ -312,8 +312,9 @@ export function drawFooter(g, mode, toast) {
 		g.text(s, "Ⓐ -1  Ⓑ +1", W - 6, fy, "right");
 		return;
 	}
-	const modeText = mode === "adv" ? "ADV" : mode === "dis" ? "DIS" : "normal";
 	g.text(s, "⬅️➡️ page  ⬆️⬇️ select  🎣/Ⓐ roll", 6, fy);
+	if (mode === "plain") return;
+	const modeText = mode === "adv" ? "ADV" : mode === "dis" ? "DIS" : mode === "crit" ? "CRIT" : "normal";
 	g.text(s, "Ⓑ " + modeText, W - 6, fy, "right");
 }
 
