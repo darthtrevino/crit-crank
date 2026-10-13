@@ -14,7 +14,7 @@ VOLUME="${PLAYDATE_VOLUME:-/Volumes/PLAYDATE}"
 [ -d charsheet.pdx ] || { echo "charsheet.pdx not found; run 'make build' first" >&2; exit 1; }
 [ -x "$PDUTIL" ] || { echo "pdutil not found at $PDUTIL; set PLAYDATE_SDK_PATH" >&2; exit 1; }
 
-port() { ls /dev/cu.usbmodemPD* /dev/ttyACM* 2>/dev/null | head -n 1; }
+port() { ls /dev/cu.usbmodemPD* /dev/ttyACM* 2>/dev/null | head -n 1 || true; }
 has_port() { [ -n "$(port)" ]; }
 
 wait_for() { # wait_for <description> <test command...>
