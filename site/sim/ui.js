@@ -157,29 +157,36 @@ function drawPill(g, text, cx, y) {
 	g.text(fonts.small, text, cx, y + 1, "center", "white");
 }
 
-// The tray box the dice bounce around in while a roll tumbles.
+// The tray box the dice bounce around in: the whole panel above the hint line.
 export const DICE_LEFT = TRAY_X + 1;
 export const DICE_RIGHT = W - 3;
-export const DICE_TOP = BODY_Y + 35;
-export const DICE_BOTTOM = BODY_Y + 123;
+export const DICE_TOP = BODY_Y + 3;
+export const DICE_BOTTOM = FOOTER_Y - 20;
 export const DICE_INSET = 2;
+const DIE_REACH = 1.15; // the widest solid (d4) reaches 1.15 r from its centre
 
 // Resting grid for n dice between top and bottom: { r, xs, ys }.
+// Picks the column count that gives the biggest cells, then sizes the dice
+// so their widest silhouettes fit in a cell.
 export function diceLayout(n, top = DICE_TOP, bottom = DICE_BOTTOM) {
-	let r, cols;
-	if (n === 1) [r, cols] = [30, 1];
-	else if (n === 2) [r, cols] = [24, 2];
-	else if (n <= 6) [r, cols] = [17, 3];
-	else if (n <= 12) [r, cols] = [14, 4];
-	else [r, cols] = [11, 5];
-	const gap = Math.min(r * 2 + 4, Math.floor((W - TRAY_X - 4) / cols));
+	const w = DICE_RIGHT - DICE_LEFT - 2 * DICE_INSET;
+	const h = bottom - top - 2 * DICE_INSET;
+	const maxR = n === 1 ? 30 : 24;
+	const cap = maxR * 2 * DIE_REACH;
+	let cell = 0, cols = n;
+	for (let c = n; c >= 1; c--) {
+		const size = Math.min(cap, w / c, h / Math.ceil(n / c));
+		if (size > cell) [cell, cols] = [size, c];
+	}
+	const r = Math.min(maxR, Math.floor(cell / (2 * DIE_REACH)));
+	const gap = Math.min(cell, Math.ceil(r * 2 * DIE_REACH) + 4);
 	const rowsN = Math.ceil(n / cols);
-	const startY = top + Math.floor((bottom - top - rowsN * gap) / 2) + gap / 2;
+	const startY = (top + bottom) / 2 - (rowsN - 1) * gap / 2;
 	const xs = [], ys = [];
 	for (let i = 0; i < n; i++) {
 		const row = Math.floor(i / cols);
 		const inRow = Math.min(cols, n - row * cols);
-		xs.push(TRAY_CX - (inRow - 1) * gap / 2 + (i % cols) * gap);
+		xs.push((DICE_LEFT + DICE_RIGHT) / 2 - (inRow - 1) * gap / 2 + (i % cols) * gap);
 		ys.push(startY + row * gap);
 	}
 	return { r, xs, ys };
@@ -190,6 +197,23 @@ function drawTrayBox(g) {
 	g.setDither(0.5, "bayer2");
 	g.drawRoundRect(DICE_LEFT, DICE_TOP, DICE_RIGHT - DICE_LEFT, DICE_BOTTOM - DICE_TOP, 6);
 	g.setColor("black");
+}
+
+// The result popover drawn over the settled dice.
+function drawResultBox(g, total, note, hot) {
+	const w = TRAY_W - 4, h = note ? 58 : 42;
+	const x = TRAY_CX - w / 2;
+	const y = Math.floor((DICE_TOP + DICE_BOTTOM - h) / 2);
+	g.setColor("white");
+	g.fillRoundRect(x, y, w, h, 6);
+	g.setColor("black");
+	g.drawRoundRect(x, y, w, h, 6);
+	g.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5);
+	g.text(fonts.big, String(total), TRAY_CX, y + 5, "center");
+	if (note) {
+		if (hot) drawPill(g, note, TRAY_CX, y + 38);
+		else g.text(fonts.small, g.fit(fonts.small, note, w - 8), TRAY_CX, y + 39, "center");
+	}
 }
 
 // Bodies that have been placed in the tray draw where they are.
@@ -216,7 +240,7 @@ export function drawTray(g, t) {
 		g.text(s, "Nothing to roll", TRAY_CX, y + 70, "center");
 		return;
 	}
-	g.text(s, g.fit(s, row.title || row.label, TRAY_W), TRAY_CX, y, "center");
+	if (row.kind !== "roll") g.text(s, g.fit(s, row.title || row.label, TRAY_W), TRAY_CX, y, "center");
 
 	if (row.kind === "resource") {
 		const [cur, max] = t.getResource(row.key);
@@ -268,47 +292,34 @@ export function drawTray(g, t) {
 		g.text(s, "rows below ⬇️", TRAY_CX, y + 106, "center");
 		return;
 	}
-	let tag;
-	if (roll && roll.crit) tag = "CRITICAL x2";
-	else if (!roll && t.critPending && row.critable) tag = "CRITICAL x2";
-	else if (spec.check) {
-		const mode = roll ? roll.mode : t.mode;
-		if (mode === "adv") tag = "ADVANTAGE";
-		else if (mode === "dis") tag = "DISADVANTAGE";
-	}
-	if (tag) drawPill(g, tag, TRAY_CX, y + 15);
-	else g.text(s, Dice.format(spec), TRAY_CX, y + 16, "center");
-
-	const diceTop = DICE_TOP, diceBottom = DICE_BOTTOM;
+	const hintY = DICE_BOTTOM + 2;
 	drawTrayBox(g);
 	if (!roll) {
-		drawDiceGrid(g, t.preview.dice, t.preview.bodies, diceTop, diceBottom);
-		if (row.detail) g.text(s, g.fit(s, row.detail, TRAY_W), TRAY_CX, y + 128, "center");
-		g.text(s, t.docked ? "Press Ⓐ to roll" : "Crank to roll 🎣", TRAY_CX, y + 150, "center");
+		drawDiceGrid(g, t.preview.dice, t.preview.bodies);
+		g.text(s, t.docked ? "Press Ⓐ to roll" : "Crank to roll 🎣", TRAY_CX, hintY, "center");
 		return;
 	}
 	if (roll.phase === "tumble") {
-		drawDiceGrid(g, roll.faces, roll.bodies, diceTop, diceBottom);
-		g.text(s, "rolling...", TRAY_CX, y + 150, "center");
+		drawDiceGrid(g, roll.faces, roll.bodies);
+		g.text(s, "rolling...", TRAY_CX, hintY, "center");
 		return;
 	}
 	const res = roll.result;
 	if (roll.phase === "landing") {
-		drawDiceGrid(g, res.dice, roll.bodies, diceTop, diceBottom);
+		drawDiceGrid(g, res.dice, roll.bodies);
 		return;
 	}
-	drawDiceGrid(g, res.dice, roll.bodies, diceTop, diceBottom, res);
-	g.text(fonts.big, String(res.total), TRAY_CX, y + 122, "center");
+	drawDiceGrid(g, res.dice, roll.bodies, undefined, undefined, res);
 
 	let note;
 	if (res.crit) note = res.natural === 20 ? "NATURAL 20!" : `CRIT! (${res.natural})`;
 	else if (res.fumble) note = "NATURAL 1";
 	else if (res.lucky) note = "Lucky! rerolled a 1";
 	else if (spec.bonus !== 0) note = `${res.total - spec.bonus} ${spec.bonus > 0 ? "+ " : "- "}${Math.abs(spec.bonus)}`;
-	if (note) {
-		if (res.crit || res.fumble) drawPill(g, note, TRAY_CX, y + 158);
-		else g.text(s, note, TRAY_CX, y + 160, "center");
-	}
+	drawResultBox(g, res.total, note, res.crit || res.fumble);
+	if (roll.crit) g.text(s, "CRITICAL x2", TRAY_CX, hintY, "center");
+	else if (spec.check && roll.mode === "adv") g.text(s, "with advantage", TRAY_CX, hintY, "center");
+	else if (spec.check && roll.mode === "dis") g.text(s, "with disadvantage", TRAY_CX, hintY, "center");
 }
 
 // ------------------------------------------------------------ footer
