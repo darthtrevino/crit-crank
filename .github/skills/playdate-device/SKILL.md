@@ -17,7 +17,7 @@ cd charsheet && make build
 P=$(ls /dev/cu.usbmodemPD* | head -1); PDUTIL=~/Developer/PlaydateSDK/bin/pdutil
 $PDUTIL $P datadisk                       # device reboots into USB disk mode
 # wait for /Volumes/PLAYDATE/Games to appear (poll ~1s, up to 30s)
-rm -rf /Volumes/PLAYDATE/Games/critcrank.pdx
+rm -rf /Volumes/PLAYDATE/Games/critcrank.pdx /Volumes/PLAYDATE/Games/charsheet.pdx  # charsheet.pdx: pre-rename install
 cp -R critcrank.pdx /Volumes/PLAYDATE/Games/
 diskutil eject /Volumes/PLAYDATE         # if DLP/Defender blocks this, ask the user to eject
 # wait for the serial port to come back, then:
