@@ -221,10 +221,17 @@ local function drawPill(text, cx, y)
 	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
--- dice: list of { sides, value, kept }; bodies: matching Dice3D bodies.
-local function drawDiceGrid(dice, bodies, top, bottom, result)
-	local n = #dice
-	if n == 0 then return end
+-- The tray box the dice bounce around in while a roll tumbles.
+UI.DICE_LEFT = UI.TRAY_X + 1
+UI.DICE_RIGHT = UI.W - 3
+UI.DICE_TOP = UI.BODY_Y + 35
+UI.DICE_BOTTOM = UI.BODY_Y + 123
+UI.DICE_INSET = 2
+
+-- Resting grid for n dice between top and bottom: radius, then centres.
+function UI.diceLayout(n, top, bottom)
+	top = top or UI.DICE_TOP
+	bottom = bottom or UI.DICE_BOTTOM
 	local r, cols
 	if n == 1 then
 		r, cols = 30, 1
@@ -241,19 +248,39 @@ local function drawDiceGrid(dice, bodies, top, bottom, result)
 	local rowsN = math.ceil(n / cols)
 	local gridH = rowsN * gap
 	local startY = top + math.floor((bottom - top - gridH) / 2) + gap / 2
-	for i, d in ipairs(dice) do
+	local xs, ys = {}, {}
+	for i = 1, n do
 		local row = math.floor((i - 1) / cols)
 		local inRow = math.min(cols, n - row * cols)
 		local col = (i - 1) % cols
-		local cx = TRAY_CX - (inRow - 1) * gap / 2 + col * gap
-		local cy = startY + row * gap
+		xs[i] = TRAY_CX - (inRow - 1) * gap / 2 + col * gap
+		ys[i] = startY + row * gap
+	end
+	return r, xs, ys
+end
+
+local function drawTrayBox()
+	gfx.setColor(gfx.kColorBlack)
+	gfx.setDitherPattern(0.5, gfx.image.kDitherTypeBayer2x2)
+	gfx.drawRoundRect(UI.DICE_LEFT, UI.DICE_TOP, UI.DICE_RIGHT - UI.DICE_LEFT, UI.DICE_BOTTOM - UI.DICE_TOP, 6)
+	gfx.setColor(gfx.kColorBlack)
+end
+
+-- dice: list of { sides, value, kept }; bodies: matching Dice3D bodies.
+-- Bodies that have been placed in the tray draw where they are.
+local function drawDiceGrid(dice, bodies, top, bottom, result)
+	local n = #dice
+	if n == 0 then return end
+	local r, xs, ys = UI.diceLayout(n, top, bottom)
+	for i, d in ipairs(dice) do
+		local b = bodies[i]
 		local style = "normal"
 		if not d.kept then
 			style = "dropped"
 		elseif result and d.sides == 20 and result.natural == d.value and (result.crit or result.fumble) then
 			style = "hot"
 		end
-		Dice3D.draw(bodies[i], cx, cy, r, d.value, style, fonts.small)
+		Dice3D.draw(b, b.x or xs[i], b.y or ys[i], b.r or r, d.value, style, fonts.small)
 	end
 end
 
@@ -348,7 +375,8 @@ function UI.drawTray(t)
 		drawText(fonts.small, Dice.format(spec), TRAY_CX, y + 16, "center")
 	end
 
-	local diceTop, diceBottom = y + 32, y + 120
+	local diceTop, diceBottom = UI.DICE_TOP, UI.DICE_BOTTOM
+	drawTrayBox()
 	if not roll then
 		drawDiceGrid(t.preview.dice, t.preview.bodies, diceTop, diceBottom)
 		if row.detail then

@@ -329,6 +329,115 @@ function Dice3D.isSettled(body)
 	return not body.landing
 end
 
+---------------------------------------------------------------- tray physics
+-- Bodies with a position (x, y, r in screen pixels) slide around a box,
+-- bouncing off its walls and each other and rolling the way they travel.
+
+local WALL_BOUNCE <const> = 0.75
+local ROLL_DRAG <const> = 0.95
+local LAND_DRAG <const> = 0.7
+local MAX_SPEED <const> = 9
+local TOSS <const> = 15 -- pixels per frame per unit of spin
+
+function Dice3D.place(body, x, y, r)
+	body.x, body.y, body.r = x, y, r
+	body.vx, body.vy = 0, 0
+end
+
+-- Shoves a placed body; `amount` uses the same scale as Dice3D.spin.
+-- A moving die is pushed along (with a wobble) so it keeps bouncing.
+function Dice3D.toss(body, amount)
+	if not body.x then return end
+	local v = amount * TOSS
+	local a
+	if body.vx * body.vx + body.vy * body.vy > 0.25 then
+		a = atan(body.vy, body.vx) + (math.random() - 0.5) * 1.2
+	else
+		a = math.random() * 2 * math.pi
+	end
+	body.vx += cos(a) * v
+	body.vy += sin(a) * v
+end
+
+local function clampToBox(b, left, top, right, bottom)
+	local hit = false
+	if b.x < left + b.r then
+		b.x, b.vx, hit = left + b.r, math.abs(b.vx) * WALL_BOUNCE, true
+	elseif b.x > right - b.r then
+		b.x, b.vx, hit = right - b.r, -math.abs(b.vx) * WALL_BOUNCE, true
+	end
+	if b.y < top + b.r then
+		b.y, b.vy, hit = top + b.r, math.abs(b.vy) * WALL_BOUNCE, true
+	elseif b.y > bottom - b.r then
+		b.y, b.vy, hit = bottom - b.r, -math.abs(b.vy) * WALL_BOUNCE, true
+	end
+	return hit
+end
+
+-- Moves every placed body one frame inside the box. Returns true if any die
+-- hit a wall or another die hard enough to hear.
+function Dice3D.step(bodies, left, top, right, bottom)
+	local clack = false
+	for _, b in ipairs(bodies) do
+		if b.x then
+			local drag = b.landing and LAND_DRAG or ROLL_DRAG
+			b.vx *= drag
+			b.vy *= drag
+			local s = sqrt(b.vx * b.vx + b.vy * b.vy)
+			if s > MAX_SPEED then
+				b.vx, b.vy, s = b.vx * MAX_SPEED / s, b.vy * MAX_SPEED / s, MAX_SPEED
+			end
+			b.x += b.vx
+			b.y += b.vy
+			if clampToBox(b, left, top, right, bottom) and s > 2 then clack = true end
+			if s > 0.3 and not b.landing then
+				-- roll toward the direction of travel (screen y points down)
+				b.axis = { norm(b.vy, b.vx, 0) }
+				b.speed = math.max(b.speed, math.min(0.9, s / b.r))
+			end
+		end
+	end
+	for i = 1, #bodies do
+		local a = bodies[i]
+		for j = i + 1, #bodies do
+			local b = bodies[j]
+			if a.x and b.x then
+				local dx, dy = b.x - a.x, b.y - a.y
+				local min = a.r + b.r
+				local d2 = dx * dx + dy * dy
+				if d2 < min * min then
+					local d = sqrt(d2)
+					local nx, ny
+					if d < 0.01 then
+						local ang = math.random() * 2 * math.pi
+						nx, ny = cos(ang), sin(ang)
+					else
+						nx, ny = dx / d, dy / d
+					end
+					local push = (min - d) / 2
+					a.x -= nx * push
+					a.y -= ny * push
+					b.x += nx * push
+					b.y += ny * push
+					local rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny
+					if rel < 0 then
+						local j2 = -rel * (1 + WALL_BOUNCE) / 2
+						a.vx -= j2 * nx
+						a.vy -= j2 * ny
+						b.vx += j2 * nx
+						b.vy += j2 * ny
+						if -rel > 2 then clack = true end
+					end
+				end
+			end
+		end
+	end
+	for _, b in ipairs(bodies) do
+		if b.x then clampToBox(b, left, top, right, bottom) end
+	end
+	return clack
+end
+
 ---------------------------------------------------------------- drawing
 
 local function drawLabel(font, s, x, y)

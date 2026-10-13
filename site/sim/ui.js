@@ -157,9 +157,15 @@ function drawPill(g, text, cx, y) {
 	g.text(fonts.small, text, cx, y + 1, "center", "white");
 }
 
-function drawDiceGrid(g, dice, bodies, top, bottom, result) {
-	const n = dice.length;
-	if (n === 0) return;
+// The tray box the dice bounce around in while a roll tumbles.
+export const DICE_LEFT = TRAY_X + 1;
+export const DICE_RIGHT = W - 3;
+export const DICE_TOP = BODY_Y + 35;
+export const DICE_BOTTOM = BODY_Y + 123;
+export const DICE_INSET = 2;
+
+// Resting grid for n dice between top and bottom: { r, xs, ys }.
+export function diceLayout(n, top = DICE_TOP, bottom = DICE_BOTTOM) {
 	let r, cols;
 	if (n === 1) [r, cols] = [30, 1];
 	else if (n === 2) [r, cols] = [24, 2];
@@ -169,16 +175,34 @@ function drawDiceGrid(g, dice, bodies, top, bottom, result) {
 	const gap = Math.min(r * 2 + 4, Math.floor((W - TRAY_X - 4) / cols));
 	const rowsN = Math.ceil(n / cols);
 	const startY = top + Math.floor((bottom - top - rowsN * gap) / 2) + gap / 2;
-	dice.forEach((d, i) => {
+	const xs = [], ys = [];
+	for (let i = 0; i < n; i++) {
 		const row = Math.floor(i / cols);
 		const inRow = Math.min(cols, n - row * cols);
-		const col = i % cols;
-		const cx = TRAY_CX - (inRow - 1) * gap / 2 + col * gap;
-		const cy = startY + row * gap;
+		xs.push(TRAY_CX - (inRow - 1) * gap / 2 + (i % cols) * gap);
+		ys.push(startY + row * gap);
+	}
+	return { r, xs, ys };
+}
+
+function drawTrayBox(g) {
+	g.setColor("black");
+	g.setDither(0.5, "bayer2");
+	g.drawRoundRect(DICE_LEFT, DICE_TOP, DICE_RIGHT - DICE_LEFT, DICE_BOTTOM - DICE_TOP, 6);
+	g.setColor("black");
+}
+
+// Bodies that have been placed in the tray draw where they are.
+function drawDiceGrid(g, dice, bodies, top, bottom, result) {
+	const n = dice.length;
+	if (n === 0) return;
+	const { r, xs, ys } = diceLayout(n, top, bottom);
+	dice.forEach((d, i) => {
+		const b = bodies[i];
 		let style = "normal";
 		if (!d.kept) style = "dropped";
 		else if (result && d.sides === 20 && result.natural === d.value && (result.crit || result.fumble)) style = "hot";
-		Dice3D.draw(g, bodies[i], cx, cy, r, d.value, style);
+		Dice3D.draw(g, b, b.x ?? xs[i], b.y ?? ys[i], b.r ?? r, d.value, style);
 	});
 }
 
@@ -255,7 +279,8 @@ export function drawTray(g, t) {
 	if (tag) drawPill(g, tag, TRAY_CX, y + 15);
 	else g.text(s, Dice.format(spec), TRAY_CX, y + 16, "center");
 
-	const diceTop = y + 32, diceBottom = y + 120;
+	const diceTop = DICE_TOP, diceBottom = DICE_BOTTOM;
+	drawTrayBox(g);
 	if (!roll) {
 		drawDiceGrid(g, t.preview.dice, t.preview.bodies, diceTop, diceBottom);
 		if (row.detail) g.text(s, g.fit(s, row.detail, TRAY_W), TRAY_CX, y + 128, "center");
