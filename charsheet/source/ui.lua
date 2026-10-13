@@ -273,24 +273,23 @@ local function drawTrayBox()
 	gfx.setColor(gfx.kColorBlack)
 end
 
--- The result popover, docked to the top of the tray over the settled dice.
-local function drawResultBox(total, note, hot)
-	local w, h = TRAY_W - 4, note and 58 or 42
-	local x = TRAY_CX - w / 2
-	local y = UI.DICE_TOP + 3
-	gfx.setColor(gfx.kColorWhite)
-	gfx.fillRoundRect(x, y, w, h, 6)
-	gfx.setColor(gfx.kColorBlack)
-	gfx.drawRoundRect(x, y, w, h, 6)
-	gfx.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5)
-	drawText(fonts.big, tostring(total), TRAY_CX, y + 5, "center")
-	if note then
-		if hot then
-			drawPill(note, TRAY_CX, y + 38)
-		else
-			drawText(fonts.small, fit(fonts.small, note, w - 8), TRAY_CX, y + 39, "center")
-		end
+-- The roll result, on the hint line under the tray: the total, then any detail.
+-- A crit or fumble draws the line inverted.
+local function drawResultLine(total, detail, hot, y)
+	local totalS = tostring(total)
+	local totalW = textW(fonts.title, totalS)
+	local gap = detail and 6 or 0
+	if detail then detail = fit(fonts.small, detail, TRAY_W - totalW - gap) end
+	local w = totalW + gap + (detail and textW(fonts.small, detail) or 0)
+	local x = TRAY_CX - math.floor(w / 2)
+	if hot then
+		gfx.setColor(gfx.kColorBlack)
+		gfx.fillRoundRect(x - 6, y - 1, w + 12, 18, 8)
+		gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
 	end
+	drawText(fonts.title, totalS, x, y - 1)
+	if detail then drawText(fonts.small, detail, x + totalW + gap, y + 2) end
+	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
 -- dice: list of { sides, value, kept }; bodies: matching Dice3D bodies.
@@ -422,22 +421,25 @@ function UI.drawTray(t)
 
 	local note
 	if res.crit then
-		note = (res.natural == 20) and "NATURAL 20!" or ("CRIT! (" .. res.natural .. ")")
+		note = (res.natural == 20) and "NAT 20!" or ("CRIT! (" .. res.natural .. ")")
 	elseif res.fumble then
-		note = "NATURAL 1"
+		note = "NAT 1"
 	elseif res.lucky then
-		note = "Lucky! rerolled a 1"
+		note = "Lucky! rerolled 1"
 	elseif spec.bonus ~= 0 then
-		note = tostring(res.total - spec.bonus) .. " " .. (spec.bonus > 0 and "+ " or "- ") .. math.abs(spec.bonus)
+		note = "= " .. tostring(res.total - spec.bonus) .. " " .. (spec.bonus > 0 and "+ " or "- ") .. math.abs(spec.bonus)
 	end
-	drawResultBox(res.total, note, res.crit or res.fumble)
+	local tag
 	if roll.crit then
-		drawText(fonts.small, "CRITICAL x2", TRAY_CX, hintY, "center")
+		tag = "CRIT x2"
 	elseif spec.check and roll.mode == "adv" then
-		drawText(fonts.small, "with advantage", TRAY_CX, hintY, "center")
+		tag = "adv"
 	elseif spec.check and roll.mode == "dis" then
-		drawText(fonts.small, "with disadvantage", TRAY_CX, hintY, "center")
+		tag = "dis"
 	end
+	local detail = note
+	if tag then detail = note and (note .. "  " .. tag) or tag end
+	drawResultLine(res.total, detail, res.crit or res.fumble, hintY)
 end
 
 ---------------------------------------------------------------- footer

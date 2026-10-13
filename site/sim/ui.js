@@ -206,21 +206,22 @@ function drawTrayBox(g) {
 	g.setColor("black");
 }
 
-// The result popover drawn over the settled dice.
-function drawResultBox(g, total, note, hot) {
-	const w = TRAY_W - 4, h = note ? 58 : 42;
-	const x = TRAY_CX - w / 2;
-	const y = DICE_TOP + 3;
-	g.setColor("white");
-	g.fillRoundRect(x, y, w, h, 6);
-	g.setColor("black");
-	g.drawRoundRect(x, y, w, h, 6);
-	g.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5);
-	g.text(fonts.big, String(total), TRAY_CX, y + 5, "center");
-	if (note) {
-		if (hot) drawPill(g, note, TRAY_CX, y + 38);
-		else g.text(fonts.small, g.fit(fonts.small, note, w - 8), TRAY_CX, y + 39, "center");
+// The roll result, on the hint line under the tray: the total, then any detail.
+// A crit or fumble draws the line inverted.
+function drawResultLine(g, total, detail, hot, y) {
+	const totalS = String(total);
+	const totalW = g.textW(fonts.title, totalS);
+	const gap = detail ? 6 : 0;
+	if (detail) detail = g.fit(fonts.small, detail, TRAY_W - totalW - gap);
+	const w = totalW + gap + (detail ? g.textW(fonts.small, detail) : 0);
+	const x = TRAY_CX - Math.floor(w / 2);
+	const mode = hot ? "white" : "copy";
+	if (hot) {
+		g.setColor("black");
+		g.fillRoundRect(x - 6, y - 1, w + 12, 18, 8);
 	}
+	g.text(fonts.title, totalS, x, y - 1, "left", mode);
+	if (detail) g.text(fonts.small, detail, x + totalW + gap, y + 2, "left", mode);
 }
 
 // Bodies that have been placed in the tray draw where they are.
@@ -326,14 +327,16 @@ export function drawTray(g, t) {
 	drawDiceGrid(g, res.dice, roll.bodies, undefined, undefined, res);
 
 	let note;
-	if (res.crit) note = res.natural === 20 ? "NATURAL 20!" : `CRIT! (${res.natural})`;
-	else if (res.fumble) note = "NATURAL 1";
-	else if (res.lucky) note = "Lucky! rerolled a 1";
-	else if (spec.bonus !== 0) note = `${res.total - spec.bonus} ${spec.bonus > 0 ? "+ " : "- "}${Math.abs(spec.bonus)}`;
-	drawResultBox(g, res.total, note, res.crit || res.fumble);
-	if (roll.crit) g.text(s, "CRITICAL x2", TRAY_CX, hintY, "center");
-	else if (spec.check && roll.mode === "adv") g.text(s, "with advantage", TRAY_CX, hintY, "center");
-	else if (spec.check && roll.mode === "dis") g.text(s, "with disadvantage", TRAY_CX, hintY, "center");
+	if (res.crit) note = res.natural === 20 ? "NAT 20!" : `CRIT! (${res.natural})`;
+	else if (res.fumble) note = "NAT 1";
+	else if (res.lucky) note = "Lucky! rerolled 1";
+	else if (spec.bonus !== 0) note = `= ${res.total - spec.bonus} ${spec.bonus > 0 ? "+ " : "- "}${Math.abs(spec.bonus)}`;
+	let tag;
+	if (roll.crit) tag = "CRIT x2";
+	else if (spec.check && roll.mode === "adv") tag = "adv";
+	else if (spec.check && roll.mode === "dis") tag = "dis";
+	const detail = tag ? (note ? `${note}  ${tag}` : tag) : note;
+	drawResultLine(g, res.total, detail, res.crit || res.fumble, hintY);
 }
 
 // ------------------------------------------------------------ footer
