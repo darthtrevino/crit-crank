@@ -194,9 +194,8 @@
 
 			<section id="import">
 				<h2>Import from D&amp;D Beyond</h2>
-				<p><b>charsync</b> is a command-line tool for macOS, Windows and Linux. Download the matching binary from the <a href="https://github.com/darthtrevino/crit-crank/releases/latest">latest release</a>. It downloads a <em>public</em> D&amp;D Beyond character, converts it and sends it to your Playdate over USB while Crit Crank is running. Run <code>./charsync-macos</code> on macOS, <code>./charsync-linux</code> on Linux, or <code>.\charsync-windows.exe</code> in Windows PowerShell. On macOS and Linux, make it executable first; on macOS also clear the download quarantine, since the binary isn't notarized:</p>
+				<p><b>charsync</b> is a command-line tool for macOS, Windows and Linux. Download the matching binary from the <a href="https://github.com/darthtrevino/crit-crank/releases/latest">latest release</a>. It downloads a <em>public</em> D&amp;D Beyond character, converts it and sends it to your Playdate over USB while Crit Crank is running. Run <code>./charsync-macos</code> on macOS, <code>./charsync-linux</code> on Linux, or <code>.\charsync-windows.exe</code> in Windows PowerShell. On macOS and Linux, make it executable first:</p>
 <pre><code>chmod +x charsync-macos
-xattr -d com.apple.quarantine charsync-macos
 ./charsync-macos import https://www.dndbeyond.com/characters/12345678</code></pre>
 				<p>It converts ability scores, saves, skills, HP, AC, spell slots, weapons, damage and healing spells, and limited-use features. Spell and feature descriptions show up on the pause screen and in the Rules viewer. The new hero is selected straight away. Importing the same character again updates it and keeps its current HP, slots and uses.</p>
 				<p>The <a href="https://github.com/darthtrevino/crit-crank/tree/main/charsync">charsync README</a> covers the Simulator, USB disk mode and removing a hero.</p>
