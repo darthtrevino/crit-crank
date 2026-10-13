@@ -14,17 +14,20 @@ The recording comes from the game's own framebuffer, never from the user's
 desktop. A temporary `devrec.lua` wraps `playdate.update`, plays scripted
 input (buttons and crank), and writes every frame to `/tmp/critcrank-rec/`.
 
-Scripts live in `.github/skills/simulator-recording/scripts/` (`$R` below is
-`record.sh` in that folder).
+Run everything from the repo root, after setting:
+```sh
+R=.github/skills/simulator-recording/scripts/record.sh
+```
 
 ## 1. Set up
 1. Take the Simulator lock (`playdate-simulator` skill). If it's busy, stop and
    tell the user rather than skipping the recording.
-2. Back up the save data, which the scripted input will change:
-   `cp -R ~/Developer/PlaydateSDK/Disk/Data/com.christrevino.charsheet /tmp/cs-data-bak`
-3. `$R install`: copies `templates/devrec.lua` to `charsheet/source/devrec.lua`
-   and appends `import "devrec" -- DEVTEMP` to `main.lua`.
-4. Edit the `SCRIPT` table in `charsheet/source/devrec.lua` to show the change.
+2. `$R install`: backs up the save data (which the scripted input will
+   change) to a fresh `mktemp` directory, copies `templates/devrec.lua` to
+   `charsheet/source/devrec.lua`, and appends `import "devrec" -- DEVTEMP` to
+   `main.lua`. It refuses to run if an earlier backup was never restored; run
+   `$R uninstall` (Simulator quit) to restore that one first.
+3. Edit the `SCRIPT` table in `charsheet/source/devrec.lua` to show the change.
    Steps: `{ "wait", frames }`, `{ "press", "a" }`, `{ "hold", "down", frames }`,
    `{ "crank", degPerFrame, frames }`, `{ "dock", bool }`, `{ "call", fn }`.
    Button presses go to the top pushed input handler (e.g. the Rules viewer)
@@ -49,9 +52,13 @@ Optional args: `fps` (default 30) and `scale` (default 2). Look at a few frames
 (`/tmp/critcrank-rec/f*.png`) before uploading to make sure it shows the change.
 
 ## 4. Tear down (always, even on failure)
-- Quit the Simulator with literal PIDs (`pgrep -f "Playdate Simulator"`, `kill <pid>`).
-- `$R uninstall`: deletes `devrec.lua` and every `DEVTEMP` line.
-- Restore the save data from `/tmp/cs-data-bak`.
+- Quit the Simulator with literal PIDs: `pgrep -f "Playdate Simulator"`, then
+  `kill -9 <pid> <pid>` (a plain `kill` can leave it running). Check `pgrep`
+  comes back empty.
+- `$R uninstall`: restores the save data exactly as it was (deleting it if
+  there was none), removes the backup, and deletes `devrec.lua` and every
+  `DEVTEMP` line. It refuses to restore while the Simulator is running, since
+  the game saves on quit.
 - Release the lock, then rebuild and lint to confirm a clean tree.
 
 ## 5. Attach to the PR

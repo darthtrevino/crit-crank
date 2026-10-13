@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Record the Playdate Simulator with the devrec.lua harness and encode a GIF/MP4.
 # Usage:
-#   record.sh install            copy devrec.lua into the game and tag main.lua
+#   record.sh install            back up the save data, copy devrec.lua in, tag main.lua
 #   record.sh prep               clear the frame directory
 #   record.sh wait [seconds]     wait for the harness to write done.png (default 120)
 #   record.sh encode OUT [fps] [scale]   frames -> OUT (.gif via Pillow, .mp4 via ffmpeg)
-#   record.sh uninstall          remove devrec.lua and every DEVTEMP line
+#   record.sh uninstall          remove devrec.lua and DEVTEMP lines, restore the save data
+#                                (quit the Simulator first)
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -13,9 +14,37 @@ SKILL="$ROOT/.github/skills/simulator-recording"
 SRC="$ROOT/charsheet/source"
 FRAMES="/tmp/critcrank-rec"
 PY="/tmp/pilenv/bin/python"
+DATA="$HOME/Developer/PlaydateSDK/Disk/Data/com.christrevino.charsheet"
+PTR="/tmp/critcrank-rec.backup" # holds the path of the current save backup
+
+backup() {
+	if [ -f "$PTR" ]; then
+		echo "an unrestored save backup exists ($(cat "$PTR")); run record.sh uninstall first" >&2
+		exit 1
+	fi
+	B="$(mktemp -d /tmp/cs-data-bak.XXXXXX)"
+	# $B/data is absent when there was no save directory; restore then deletes it.
+	[ -d "$DATA" ] && cp -R "$DATA" "$B/data"
+	echo "$B" >"$PTR"
+	echo "save data backed up to $B"
+}
+
+restore() {
+	[ -f "$PTR" ] || { echo "no save backup to restore"; return; }
+	if pgrep -f "Playdate Simulator" >/dev/null; then
+		echo "quit the Simulator before restoring the save data" >&2
+		exit 1
+	fi
+	B="$(cat "$PTR")"
+	rm -rf "$DATA"
+	[ -d "$B/data" ] && cp -R "$B/data" "$DATA"
+	rm -rf "$B" "$PTR"
+	echo "save data restored"
+}
 
 case "${1:-}" in
 install)
+	backup
 	cp "$SKILL/templates/devrec.lua" "$SRC/devrec.lua"
 	grep -q 'import "devrec"' "$SRC/main.lua" || printf '\nimport "devrec" -- DEVTEMP\n' >>"$SRC/main.lua"
 	echo "installed $SRC/devrec.lua; edit its SCRIPT table, then: record.sh prep && (cd charsheet && make run)"
@@ -48,7 +77,10 @@ encode)
 			-vf "scale=iw*$scale:ih*$scale:flags=neighbor" -c:v libx264 -pix_fmt yuv420p "$out"
 		;;
 	*.gif)
-		[ -x "$PY" ] || { python3 -m venv /tmp/pilenv && /tmp/pilenv/bin/pip install -q pillow; }
+		if ! "$PY" -c 'import PIL' 2>/dev/null; then
+			rm -rf /tmp/pilenv
+			python3 -m venv /tmp/pilenv && /tmp/pilenv/bin/pip install -q pillow
+		fi
 		"$PY" "$SKILL/scripts/encode_gif.py" "$FRAMES" "$out" "$fps" "$scale"
 		;;
 	*) echo "OUT must end in .gif or .mp4" >&2; exit 1 ;;
@@ -56,6 +88,7 @@ encode)
 	ls -lh "$out"
 	;;
 uninstall)
+	restore
 	rm -f "$SRC/devrec.lua"
 	if grep -rln DEVTEMP "$SRC" >/dev/null 2>&1; then
 		grep -rl DEVTEMP "$SRC" | while read -r f; do sed -i '' '/DEVTEMP/d' "$f"; done
