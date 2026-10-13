@@ -49,11 +49,11 @@ jobs:
         run: |
           export PLAYDATE_SDK_PATH=~/PlaydateSDK
           cd charsheet
-          "$PLAYDATE_SDK_PATH/bin/pdc" source charsheet.pdx
+          "$PLAYDATE_SDK_PATH/bin/pdc" source critcrank.pdx
       - uses: actions/upload-artifact@v4
         with:
-          name: charsheet.pdx
-          path: charsheet/charsheet.pdx
+          name: critcrank.pdx
+          path: charsheet/critcrank.pdx
 
   charsync:
     name: charsync (${{ matrix.os }})

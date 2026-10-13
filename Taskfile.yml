@@ -16,17 +16,17 @@ tasks:
       - charsheet/tools/lint.sh
 
   build:
-    desc: Build charsheet.pdx with pdc
+    desc: Build critcrank.pdx with pdc
     dir: charsheet
     cmds:
       - make build
     sources:
       - source/**/*
     generates:
-      - charsheet.pdx/pdxinfo
+      - critcrank.pdx/pdxinfo
 
   clean:
-    desc: Remove the built charsheet.pdx
+    desc: Remove the built critcrank.pdx
     dir: charsheet
     cmds:
       - make clean

@@ -9,7 +9,7 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 
 pub const BUNDLE_ID: &str = "com.christrevino.charsheet";
-pub const GAME_PATH: &str = "/Games/charsheet.pdx";
+pub const GAME_PATH: &str = "/Games/critcrank.pdx";
 const PLAYDATE_VID: u16 = 0x1331;
 const CHUNK: usize = 180;
 
@@ -136,7 +136,7 @@ impl Device {
             }
         }
         bail!(
-            "charsheet didn't answer. Open it on the Playdate (it must be installed at {GAME_PATH}) and try again"
+            "Crit Crank didn't answer. Open it on the Playdate (it must be installed at {GAME_PATH}) and try again"
         )
     }
 

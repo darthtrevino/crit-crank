@@ -104,8 +104,8 @@ jobs:
       - name: Build
         run: |
           cd charsheet
-          "$PLAYDATE_SDK_PATH/bin/pdc" source charsheet.pdx
-          zip -qr ../crit-crank.pdx.zip charsheet.pdx
+          "$PLAYDATE_SDK_PATH/bin/pdc" source critcrank.pdx
+          zip -qr ../crit-crank.pdx.zip critcrank.pdx
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

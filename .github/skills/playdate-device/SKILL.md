@@ -17,13 +17,13 @@ cd charsheet && make build
 P=$(ls /dev/cu.usbmodemPD* | head -1); PDUTIL=~/Developer/PlaydateSDK/bin/pdutil
 $PDUTIL $P datadisk                       # device reboots into USB disk mode
 # wait for /Volumes/PLAYDATE/Games to appear (poll ~1s, up to 30s)
-rm -rf /Volumes/PLAYDATE/Games/charsheet.pdx
-cp -R charsheet.pdx /Volumes/PLAYDATE/Games/
+rm -rf /Volumes/PLAYDATE/Games/critcrank.pdx /Volumes/PLAYDATE/Games/charsheet.pdx  # charsheet.pdx: pre-rename install
+cp -R critcrank.pdx /Volumes/PLAYDATE/Games/
 diskutil eject /Volumes/PLAYDATE         # if DLP/Defender blocks this, ask the user to eject
 # wait for the serial port to come back, then:
-$PDUTIL $P run /Games/charsheet.pdx
+$PDUTIL $P run /Games/critcrank.pdx
 ```
-The device path must stay `/Games/charsheet.pdx`; don't rename the bundle.
+The device path must stay `/Games/critcrank.pdx`; don't rename the bundle.
 
 ## Drive it and capture the screen
 Use `scripts/pdserial.py`, which needs only the Python standard library:
