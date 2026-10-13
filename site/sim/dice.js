@@ -46,6 +46,7 @@ export function crit(spec) {
 		t.count *= 2;
 		if (t.keepN) t.keepN *= 2;
 	}
+	out.critical = true;
 	return out;
 }
 

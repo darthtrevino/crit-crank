@@ -202,8 +202,10 @@ export function diceLayout(n, top = DICE_TOP, bottom = DICE_BOTTOM) {
 	return { r, xs, ys };
 }
 
-// "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, else null.
+// "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, "CRITICAL" for
+// doubled crit damage, else null.
 export function modeLabel(spec, mode) {
+	if (spec && spec.critical) return "CRITICAL";
 	if (!spec || !spec.check) return null;
 	return mode === "adv" ? "ADVANTAGE" : mode === "dis" ? "DISADVANTAGE" : null;
 }

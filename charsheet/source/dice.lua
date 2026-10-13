@@ -64,6 +64,7 @@ function Dice.crit(spec)
 		t.count *= 2
 		if t.keepN then t.keepN *= 2 end
 	end
+	out.critical = true
 	return out
 end
 
