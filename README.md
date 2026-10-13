@@ -56,7 +56,19 @@ charsheet/tools/lint.sh
 (cd site && python3 -m http.server)
 ```
 
-CI runs all of these on every pull request and push to `main`. Changes under `site/` on `main` redeploy GitHub Pages.
+A [Taskfile](https://taskfile.dev) wraps these and other common jobs. Run `task --list` to see them all:
+
+| Task | What it does |
+| --- | --- |
+| `task check` | Lint, build and Rust checks (everything CI runs) |
+| `task lint` / `task build` / `task rust` | One check at a time |
+| `task sim` / `task sim:stop` | Take the Simulator lock, build and launch / quit and release |
+| `task device` | Build, copy to a USB-connected Playdate and launch it |
+| `task device:screen -- out.png` | Screenshot the device |
+| `task charsync -- import <id>` | Run charsync from source |
+| `task site` | Serve the docsite at http://localhost:8000 |
+
+CI runs the lint, build and Rust checks on every pull request and push to `main`. Changes under `site/` on `main` redeploy GitHub Pages.
 
 ### Releasing
 
