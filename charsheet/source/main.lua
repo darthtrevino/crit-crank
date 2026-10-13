@@ -795,7 +795,6 @@ local rulesInput = {
 		if v and v.target >= rulesMaxScroll(v) then closeRules() else scrollRules(UI.RULES_BODY_H - RULES_LINE) end
 	end,
 	BButtonDown = closeRules,
-	cranked = function(change) scrollRules(change * RULES_CRANK) end,
 }
 
 local function openRules()
@@ -903,7 +902,7 @@ local function buildMenu()
 			end
 		end
 	end)
-	menu:addMenuItem("Rules", openRules)
+	menu:addMenuItem("Read Rule", openRules)
 end
 
 local function shortRest()
@@ -975,7 +974,8 @@ function pd.update()
 	pd.timer.updateTimers()
 	local rulesY
 	if state.rules then
-		pd.getCrankChange() -- the viewer owns the crank; don't let it wind up a roll
+		-- The viewer owns the crank: it scrolls the text instead of winding up a roll.
+		scrollRules(pd.getCrankChange() * RULES_CRANK)
 		rulesY = updateRules()
 	else
 		updateRoll()

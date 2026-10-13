@@ -756,7 +756,7 @@ export class Game {
 		if (s.menu) {
 			const d = Rules.describe(this.character, this.selectedRow(), this.currentPage());
 			UI.drawRuleCard(g, d.title || "", d.sub || "", d.body || "");
-			UI.drawSystemMenu(g, [{ label: "Hero", value: this.names[s.menu.hero] }, { label: "Rules" }], s.menu.sel);
+			UI.drawSystemMenu(g, [{ label: "Hero", value: this.names[s.menu.hero] }, { label: "Read Rule" }], s.menu.sel);
 			g.present();
 			return;
 		}
@@ -802,7 +802,7 @@ export class Game {
 	// Plain-text summary of what's on screen, for the page's live region.
 	statusText() {
 		const s = this.state;
-		if (s.menu) return s.menu.sel === 0 ? `Pause menu. Hero: ${this.names[s.menu.hero]}` : "Pause menu. Rules";
+		if (s.menu) return s.menu.sel === 0 ? `Pause menu. Hero: ${this.names[s.menu.hero]}` : "Pause menu. Read Rule";
 		if (s.rules) return `Rules: ${s.rules.title}. ${s.rules.sub} ${s.rules.text}`;
 		const page = this.currentPage();
 		const row = this.selectedRow();
