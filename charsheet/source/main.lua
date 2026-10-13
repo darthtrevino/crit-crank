@@ -556,7 +556,7 @@ local function startRoll()
 	local faces = Dice.faces(spec)
 	local bodies = {}
 	local preview = previewFor(row)
-	local r, xs, ys = UI.diceLayout(#faces)
+	local r, xs, ys = UI.diceLayout(#faces, UI.diceTop(spec, state.mode))
 	for i, d in ipairs(faces) do
 		-- pick the dice up from where they were resting
 		local b = Dice3D.newBody(d.sides)
@@ -572,7 +572,7 @@ local function startRoll()
 	end
 	state.roll = {
 		phase = "tumble", row = row, spec = spec, crit = crit, mode = state.mode,
-		faces = faces, bodies = bodies,
+		faces = faces, bodies = bodies, floor = UI.DICE_FLOOR,
 	}
 	spinAll(0.35)
 	crank.tick, crank.idle = 0, 0
@@ -624,6 +624,8 @@ local function finishLanding()
 	end
 end
 
+local LAND_LIFT = 0.45 -- fraction of the gap to the resting floor closed per landing frame
+
 local function updateRoll()
 	local change = pd.getCrankChange()
 	local amount = math.abs(change)
@@ -636,8 +638,13 @@ local function updateRoll()
 
 	if roll and roll.phase ~= "done" then
 		local inset = UI.DICE_INSET
-		local clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.DICE_TOP + inset,
-			UI.DICE_RIGHT - inset, UI.DICE_BOTTOM - inset)
+		if roll.phase == "landing" then
+			-- ease the floor back up so the dice clear the result line as they land
+			roll.floor += (UI.DICE_BOTTOM - roll.floor) * LAND_LIFT
+			if roll.floor - UI.DICE_BOTTOM < 0.5 then roll.floor = UI.DICE_BOTTOM end
+		end
+		local clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.diceTop(roll.spec, roll.mode) + inset,
+			UI.DICE_RIGHT - inset, roll.floor - inset)
 		if clack then playClack() end
 		for _, b in ipairs(roll.bodies) do Dice3D.update(b) end
 	end

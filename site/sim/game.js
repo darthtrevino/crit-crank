@@ -20,6 +20,7 @@ export const REST_CRANK = 720;
 const REST_STEP = 90;
 const REST_DECAY = 30;
 const REST_RELOCK = 15;
+const LAND_LIFT = 0.45; // fraction of the gap to the resting floor closed per landing frame
 const RULES_SLIDE_FRAMES = 9;
 // With reduced motion, rolls land at once and the Rules panel doesn't slide.
 const REDUCED = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -440,7 +441,7 @@ export class Game {
 		const [spec, crit] = this.effectiveSpec(row);
 		const faces = Dice.faces(spec);
 		const preview = this.previewFor(row);
-		const { r, xs, ys } = UI.diceLayout(faces.length);
+		const { r, xs, ys } = UI.diceLayout(faces.length, UI.diceTop(spec, s.mode));
 		const bodies = faces.map((d, i) => {
 			const b = Dice3D.newBody(d.sides);
 			const last = s.roll && s.roll.row === row && s.roll.bodies[i];
@@ -450,7 +451,7 @@ export class Game {
 			else Dice3D.place(b, xs[i], ys[i], r);
 			return b;
 		});
-		s.roll = { phase: "tumble", row, spec, crit, mode: s.mode, faces, bodies };
+		s.roll = { phase: "tumble", row, spec, crit, mode: s.mode, faces, bodies, floor: UI.DICE_FLOOR };
 		this.spinAll(0.35);
 		this.crank.tick = 0;
 		this.crank.idle = 0;
@@ -506,7 +507,12 @@ export class Game {
 		}
 		if (roll && roll.phase !== "done") {
 			const inset = UI.DICE_INSET;
-			const clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.DICE_TOP + inset, UI.DICE_RIGHT - inset, UI.DICE_BOTTOM - inset);
+			if (roll.phase === "landing") {
+				// ease the floor back up so the dice clear the result line as they land
+				roll.floor += (UI.DICE_BOTTOM - roll.floor) * LAND_LIFT;
+				if (roll.floor - UI.DICE_BOTTOM < 0.5) roll.floor = UI.DICE_BOTTOM;
+			}
+			const clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.diceTop(roll.spec, roll.mode) + inset, UI.DICE_RIGHT - inset, roll.floor - inset);
 			if (clack) Sound.tick(250 + Math.random() * 150, 0.08, 0.015);
 			for (const b of roll.bodies) Dice3D.update(b);
 		}

@@ -227,12 +227,15 @@ local function drawPill(text, cx, y)
 	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
--- The tray box the dice bounce around in: the whole panel above the hint line.
+-- The space the dice rest in: the whole panel above the hint line. While they
+-- roll the hint line is hidden and they may roam down to DICE_FLOOR.
 UI.DICE_LEFT = UI.TRAY_X + 1
 UI.DICE_RIGHT = UI.W - 3
 UI.DICE_TOP = UI.BODY_Y + 3
 UI.DICE_BOTTOM = UI.FOOTER_Y - 20
+UI.DICE_FLOOR = UI.FOOTER_Y - 1
 UI.DICE_INSET = 2
+UI.DICE_LABEL_H = 15
 local DIE_REACH = 1.15 -- the widest solid (d4) reaches 1.15 r from its centre
 
 -- Resting grid for n dice between top and bottom: radius, then centres.
@@ -266,11 +269,25 @@ function UI.diceLayout(n, top, bottom)
 	return r, xs, ys
 end
 
-local function drawTrayBox()
+-- "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, else nil.
+function UI.modeLabel(spec, mode)
+	if not (spec and spec.check) then return nil end
+	return (mode == "adv" and "ADVANTAGE") or (mode == "dis" and "DISADVANTAGE") or nil
+end
+
+-- Top of the space the dice move in: below the mode label when one is shown.
+function UI.diceTop(spec, mode)
+	return UI.modeLabel(spec, mode) and (UI.BODY_Y + UI.DICE_LABEL_H) or UI.DICE_TOP
+end
+
+-- The mode label: a bar across the top of the tray panel.
+local function drawModeLabel(label)
+	if not label then return end
 	gfx.setColor(gfx.kColorBlack)
-	gfx.setDitherPattern(0.5, gfx.image.kDitherTypeBayer2x2)
-	gfx.drawRoundRect(UI.DICE_LEFT, UI.DICE_TOP, UI.DICE_RIGHT - UI.DICE_LEFT, UI.DICE_BOTTOM - UI.DICE_TOP, 6)
-	gfx.setColor(gfx.kColorBlack)
+	gfx.fillRect(UI.TRAY_X - 2, UI.BODY_Y, UI.W - UI.TRAY_X + 2, UI.DICE_LABEL_H)
+	gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+	drawText(fonts.small, label, TRAY_CX, UI.BODY_Y + 1, "center")
+	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
 -- The roll result, on the hint line under the tray: the total, then any detail.
@@ -398,26 +415,27 @@ function UI.drawTray(t)
 		return
 	end
 	local hintY = UI.DICE_BOTTOM + 2
-	drawTrayBox()
+	local mode = roll and roll.mode or t.mode
+	local diceTop = UI.diceTop(spec, mode)
+	drawModeLabel(UI.modeLabel(spec, mode))
 	if not roll then
-		drawDiceGrid(t.preview.dice, t.preview.bodies)
+		drawDiceGrid(t.preview.dice, t.preview.bodies, diceTop)
 		local hint = playdate.isCrankDocked() and "Undock the crank" or "Crank to roll 🎣"
 		drawText(fonts.small, hint, TRAY_CX, hintY, "center")
 		return
 	end
 
 	if roll.phase == "tumble" then
-		drawDiceGrid(roll.faces, roll.bodies)
-		drawText(fonts.small, "rolling...", TRAY_CX, hintY, "center")
+		drawDiceGrid(roll.faces, roll.bodies, diceTop)
 		return
 	end
 
 	local res = roll.result
 	if roll.phase == "landing" then
-		drawDiceGrid(res.dice, roll.bodies)
+		drawDiceGrid(res.dice, roll.bodies, diceTop)
 		return
 	end
-	drawDiceGrid(res.dice, roll.bodies, nil, nil, res)
+	drawDiceGrid(res.dice, roll.bodies, diceTop, nil, res)
 
 	local note
 	if res.crit then
@@ -429,16 +447,8 @@ function UI.drawTray(t)
 	elseif spec.bonus ~= 0 then
 		note = "= " .. tostring(res.total - spec.bonus) .. " " .. (spec.bonus > 0 and "+ " or "- ") .. math.abs(spec.bonus)
 	end
-	local tag
-	if roll.crit then
-		tag = "CRIT x2"
-	elseif spec.check and roll.mode == "adv" then
-		tag = "adv"
-	elseif spec.check and roll.mode == "dis" then
-		tag = "dis"
-	end
 	local detail = note
-	if tag then detail = note and (note .. "  " .. tag) or tag end
+	if roll.crit then detail = note and (note .. "  CRIT x2") or "CRIT x2" end
 	drawResultLine(res.total, detail, res.crit or res.fumble, hintY)
 end
 

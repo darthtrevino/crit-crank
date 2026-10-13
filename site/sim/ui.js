@@ -164,12 +164,15 @@ function drawPill(g, text, cx, y) {
 	g.text(fonts.small, text, cx, y + 1, "center", "white");
 }
 
-// The tray box the dice bounce around in: the whole panel above the hint line.
+// The space the dice rest in: the whole panel above the hint line. While they
+// roll the hint line is hidden and they may roam down to DICE_FLOOR.
 export const DICE_LEFT = TRAY_X + 1;
 export const DICE_RIGHT = W - 3;
 export const DICE_TOP = BODY_Y + 3;
 export const DICE_BOTTOM = FOOTER_Y - 20;
+export const DICE_FLOOR = FOOTER_Y - 1;
 export const DICE_INSET = 2;
+export const DICE_LABEL_H = 15;
 const DIE_REACH = 1.15; // the widest solid (d4) reaches 1.15 r from its centre
 
 // Resting grid for n dice between top and bottom: { r, xs, ys }.
@@ -199,11 +202,23 @@ export function diceLayout(n, top = DICE_TOP, bottom = DICE_BOTTOM) {
 	return { r, xs, ys };
 }
 
-function drawTrayBox(g) {
+// "ADVANTAGE" / "DISADVANTAGE" for a d20 roll in that mode, else null.
+export function modeLabel(spec, mode) {
+	if (!spec || !spec.check) return null;
+	return mode === "adv" ? "ADVANTAGE" : mode === "dis" ? "DISADVANTAGE" : null;
+}
+
+// Top of the space the dice move in: below the mode label when one is shown.
+export function diceTop(spec, mode) {
+	return modeLabel(spec, mode) ? BODY_Y + DICE_LABEL_H : DICE_TOP;
+}
+
+// The mode label: a bar across the top of the tray panel.
+function drawModeLabel(g, label) {
+	if (!label) return;
 	g.setColor("black");
-	g.setDither(0.5, "bayer2");
-	g.drawRoundRect(DICE_LEFT, DICE_TOP, DICE_RIGHT - DICE_LEFT, DICE_BOTTOM - DICE_TOP, 6);
-	g.setColor("black");
+	g.fillRect(TRAY_X - 2, BODY_Y, W - TRAY_X + 2, DICE_LABEL_H);
+	g.text(fonts.small, label, TRAY_CX, BODY_Y + 1, "center", "white");
 }
 
 // The roll result, on the hint line under the tray: the total, then any detail.
@@ -308,34 +323,31 @@ export function drawTray(g, t) {
 		return;
 	}
 	const hintY = DICE_BOTTOM + 2;
-	drawTrayBox(g);
+	const mode = roll ? roll.mode : t.mode;
+	const top = diceTop(spec, mode);
+	drawModeLabel(g, modeLabel(spec, mode));
 	if (!roll) {
-		drawDiceGrid(g, t.preview.dice, t.preview.bodies);
+		drawDiceGrid(g, t.preview.dice, t.preview.bodies, top);
 		g.text(s, t.docked ? "Undock the crank" : "Crank to roll 🎣", TRAY_CX, hintY, "center");
 		return;
 	}
 	if (roll.phase === "tumble") {
-		drawDiceGrid(g, roll.faces, roll.bodies);
-		g.text(s, "rolling...", TRAY_CX, hintY, "center");
+		drawDiceGrid(g, roll.faces, roll.bodies, top);
 		return;
 	}
 	const res = roll.result;
 	if (roll.phase === "landing") {
-		drawDiceGrid(g, res.dice, roll.bodies);
+		drawDiceGrid(g, res.dice, roll.bodies, top);
 		return;
 	}
-	drawDiceGrid(g, res.dice, roll.bodies, undefined, undefined, res);
+	drawDiceGrid(g, res.dice, roll.bodies, top, undefined, res);
 
 	let note;
 	if (res.crit) note = res.natural === 20 ? "NAT 20!" : `CRIT! (${res.natural})`;
 	else if (res.fumble) note = "NAT 1";
 	else if (res.lucky) note = "Lucky! rerolled 1";
 	else if (spec.bonus !== 0) note = `= ${res.total - spec.bonus} ${spec.bonus > 0 ? "+ " : "- "}${Math.abs(spec.bonus)}`;
-	let tag;
-	if (roll.crit) tag = "CRIT x2";
-	else if (spec.check && roll.mode === "adv") tag = "adv";
-	else if (spec.check && roll.mode === "dis") tag = "dis";
-	const detail = tag ? (note ? `${note}  ${tag}` : tag) : note;
+	const detail = roll.crit ? (note ? `${note}  CRIT x2` : "CRIT x2") : note;
 	drawResultLine(g, res.total, detail, res.crit || res.fumble, hintY);
 }
 
