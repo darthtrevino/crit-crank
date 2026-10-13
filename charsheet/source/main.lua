@@ -68,6 +68,10 @@ local function playTick()
 	tickSynth:playNote(600 + math.random(0, 600), 0.12, 0.02)
 end
 
+local function playClack()
+	tickSynth:playNote(250 + math.random(0, 150), 0.08, 0.015)
+end
+
 local function playLand(result)
 	if result.crit then
 		landSynth:playNote(1047, 0.5, 0.4)
@@ -513,7 +517,9 @@ end
 
 local function spinAll(amount)
 	for _, b in ipairs(state.roll.bodies) do
-		Dice3D.spin(b, amount * (0.8 + math.random() * 0.4))
+		local a = amount * (0.8 + math.random() * 0.4)
+		Dice3D.spin(b, a)
+		Dice3D.toss(b, a)
 	end
 end
 
@@ -549,12 +555,19 @@ local function startRoll(auto)
 	local faces = Dice.faces(spec)
 	local bodies = {}
 	local preview = previewFor(row)
+	local r, xs, ys = UI.diceLayout(#faces)
 	for i, d in ipairs(faces) do
 		-- pick the dice up from where they were resting
-		bodies[i] = Dice3D.newBody(d.sides)
+		local b = Dice3D.newBody(d.sides)
 		local last = state.roll and state.roll.row == row and state.roll.bodies[i]
 		local from = last or preview.bodies[i]
-		if from and from.sides == d.sides then bodies[i].q = from.q end
+		if from and from.sides == d.sides then b.q = from.q end
+		if last and last.x then
+			Dice3D.place(b, last.x, last.y, r)
+		else
+			Dice3D.place(b, xs[i], ys[i], r)
+		end
+		bodies[i] = b
 	end
 	state.roll = {
 		phase = "tumble", row = row, spec = spec, crit = crit, mode = state.mode,
@@ -621,6 +634,10 @@ local function updateRoll()
 	end
 
 	if roll and roll.phase ~= "done" then
+		local inset = UI.DICE_INSET
+		local clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.DICE_TOP + inset,
+			UI.DICE_RIGHT - inset, UI.DICE_BOTTOM - inset)
+		if clack then playClack() end
 		for _, b in ipairs(roll.bodies) do Dice3D.update(b) end
 	end
 

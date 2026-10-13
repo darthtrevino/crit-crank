@@ -146,7 +146,9 @@ function solidFor(sides) {
 		verts = scaled(icosaVerts(), 1.0);
 		faces = facesFromNormals(verts, dodecaVerts());
 	}
-	solids[sides] = { verts, faces };
+	// reach: the farthest vertex, so r * reach bounds the drawn silhouette
+	const reach = Math.max(...verts.map((v) => sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])));
+	solids[sides] = { verts, faces, reach };
 	return solids[sides];
 }
 
@@ -196,6 +198,109 @@ export function land(body, value) {
 }
 
 export const isSettled = (body) => !body.landing;
+
+// ------------------------------------------------------------ tray physics
+// Bodies with a position (x, y, r in screen pixels) slide around a box,
+// bouncing off its walls and each other and rolling the way they travel.
+
+const WALL_BOUNCE = 0.75;
+const ROLL_DRAG = 0.95;
+const LAND_DRAG = 0.7;
+const MAX_SPEED = 9;
+const TOSS = 15; // pixels per frame per unit of spin
+
+export function place(body, x, y, r) {
+	Object.assign(body, { x, y, r, vx: 0, vy: 0 });
+}
+
+// Shoves a placed body; `amount` uses the same scale as spin().
+// A moving die is pushed along (with a wobble) so it keeps bouncing.
+export function toss(body, amount) {
+	if (body.x == null) return;
+	const v = amount * TOSS;
+	const a = body.vx * body.vx + body.vy * body.vy > 0.25
+		? atan2(body.vy, body.vx) + (random() - 0.5) * 1.2
+		: random() * 2 * PI;
+	body.vx += cos(a) * v;
+	body.vy += sin(a) * v;
+}
+
+// Collision radius: the draw scale times the solid's farthest vertex.
+const reach = (b) => b.r * solidFor(b.sides).reach;
+
+function clampToBox(b, left, top, right, bottom) {
+	let hit = false;
+	const r = reach(b);
+	if (b.x < left + r) [b.x, b.vx, hit] = [left + r, Math.abs(b.vx) * WALL_BOUNCE, true];
+	else if (b.x > right - r) [b.x, b.vx, hit] = [right - r, -Math.abs(b.vx) * WALL_BOUNCE, true];
+	if (b.y < top + r) [b.y, b.vy, hit] = [top + r, Math.abs(b.vy) * WALL_BOUNCE, true];
+	else if (b.y > bottom - r) [b.y, b.vy, hit] = [bottom - r, -Math.abs(b.vy) * WALL_BOUNCE, true];
+	return hit;
+}
+
+// Moves every placed body one frame inside the box. Returns true if any die
+// hit a wall or another die hard enough to hear.
+export function step(bodies, left, top, right, bottom) {
+	let clack = false;
+	for (const b of bodies) {
+		if (b.x == null) continue;
+		const drag = b.landing ? LAND_DRAG : ROLL_DRAG;
+		b.vx *= drag;
+		b.vy *= drag;
+		let s = sqrt(b.vx * b.vx + b.vy * b.vy);
+		if (s > MAX_SPEED) {
+			b.vx *= MAX_SPEED / s;
+			b.vy *= MAX_SPEED / s;
+			s = MAX_SPEED;
+		}
+		b.x += b.vx;
+		b.y += b.vy;
+		if (clampToBox(b, left, top, right, bottom) && s > 2) clack = true;
+		if (s > 0.3 && !b.landing) {
+			// roll toward the direction of travel (screen y points down)
+			b.axis = norm(b.vy, b.vx, 0);
+			b.speed = Math.max(b.speed, Math.min(0.9, s / b.r));
+		}
+	}
+	// a few passes so crowded dice fully separate
+	for (let pass = 0; pass < 3; pass++) {
+		for (let i = 0; i < bodies.length; i++) {
+			const a = bodies[i];
+			for (let j = i + 1; j < bodies.length; j++) {
+				const b = bodies[j];
+				if (a.x == null || b.x == null) continue;
+				const dx = b.x - a.x, dy = b.y - a.y;
+				const min = reach(a) + reach(b);
+				const d2 = dx * dx + dy * dy;
+				if (d2 >= min * min) continue;
+				const d = sqrt(d2);
+				let nx, ny;
+				if (d < 0.01) {
+					const ang = random() * 2 * PI;
+					[nx, ny] = [cos(ang), sin(ang)];
+				} else {
+					[nx, ny] = [dx / d, dy / d];
+				}
+				const push = (min - d) / 2;
+				a.x -= nx * push;
+				a.y -= ny * push;
+				b.x += nx * push;
+				b.y += ny * push;
+				const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+				if (rel < 0) {
+					const imp = -rel * (1 + WALL_BOUNCE) / 2;
+					a.vx -= imp * nx;
+					a.vy -= imp * ny;
+					b.vx += imp * nx;
+					b.vy += imp * ny;
+					if (-rel > 2) clack = true;
+				}
+			}
+		}
+		for (const b of bodies) if (b.x != null) clampToBox(b, left, top, right, bottom);
+	}
+	return clack;
+}
 
 // ------------------------------------------------------------ drawing
 

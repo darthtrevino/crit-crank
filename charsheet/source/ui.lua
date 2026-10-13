@@ -221,39 +221,87 @@ local function drawPill(text, cx, y)
 	gfx.setImageDrawMode(gfx.kDrawModeCopy)
 end
 
--- dice: list of { sides, value, kept }; bodies: matching Dice3D bodies.
-local function drawDiceGrid(dice, bodies, top, bottom, result)
-	local n = #dice
-	if n == 0 then return end
-	local r, cols
-	if n == 1 then
-		r, cols = 30, 1
-	elseif n == 2 then
-		r, cols = 24, 2
-	elseif n <= 6 then
-		r, cols = 17, 3
-	elseif n <= 12 then
-		r, cols = 14, 4
-	else
-		r, cols = 11, 5
+-- The tray box the dice bounce around in: the whole panel above the hint line.
+UI.DICE_LEFT = UI.TRAY_X + 1
+UI.DICE_RIGHT = UI.W - 3
+UI.DICE_TOP = UI.BODY_Y + 3
+UI.DICE_BOTTOM = UI.FOOTER_Y - 20
+UI.DICE_INSET = 2
+local DIE_REACH = 1.15 -- the widest solid (d4) reaches 1.15 r from its centre
+
+-- Resting grid for n dice between top and bottom: radius, then centres.
+-- Picks the column count that gives the biggest cells, then sizes the dice
+-- so their widest silhouettes fit in a cell.
+function UI.diceLayout(n, top, bottom)
+	top = top or UI.DICE_TOP
+	bottom = bottom or UI.DICE_BOTTOM
+	local inset = UI.DICE_INSET
+	local w = UI.DICE_RIGHT - UI.DICE_LEFT - 2 * inset
+	local h = bottom - top - 2 * inset
+	local maxR = (n == 1) and 30 or 24
+	local cap = maxR * 2 * DIE_REACH
+	local cell, cols = 0, n
+	for c = n, 1, -1 do
+		local size = math.min(cap, w / c, h / math.ceil(n / c))
+		if size > cell then cell, cols = size, c end
 	end
-	local gap = math.min(r * 2 + 4, math.floor((UI.W - UI.TRAY_X - 4) / cols))
+	local r = math.min(maxR, math.floor(cell / (2 * DIE_REACH)))
+	local gap = math.min(cell, math.ceil(r * 2 * DIE_REACH) + 4)
 	local rowsN = math.ceil(n / cols)
-	local gridH = rowsN * gap
-	local startY = top + math.floor((bottom - top - gridH) / 2) + gap / 2
-	for i, d in ipairs(dice) do
+	local startY = (top + bottom) / 2 - (rowsN - 1) * gap / 2
+	local xs, ys = {}, {}
+	for i = 1, n do
 		local row = math.floor((i - 1) / cols)
 		local inRow = math.min(cols, n - row * cols)
 		local col = (i - 1) % cols
-		local cx = TRAY_CX - (inRow - 1) * gap / 2 + col * gap
-		local cy = startY + row * gap
+		xs[i] = (UI.DICE_LEFT + UI.DICE_RIGHT) / 2 - (inRow - 1) * gap / 2 + col * gap
+		ys[i] = startY + row * gap
+	end
+	return r, xs, ys
+end
+
+local function drawTrayBox()
+	gfx.setColor(gfx.kColorBlack)
+	gfx.setDitherPattern(0.5, gfx.image.kDitherTypeBayer2x2)
+	gfx.drawRoundRect(UI.DICE_LEFT, UI.DICE_TOP, UI.DICE_RIGHT - UI.DICE_LEFT, UI.DICE_BOTTOM - UI.DICE_TOP, 6)
+	gfx.setColor(gfx.kColorBlack)
+end
+
+-- The result popover, docked to the top of the tray over the settled dice.
+local function drawResultBox(total, note, hot)
+	local w, h = TRAY_W - 4, note and 58 or 42
+	local x = TRAY_CX - w / 2
+	local y = UI.DICE_TOP + 3
+	gfx.setColor(gfx.kColorWhite)
+	gfx.fillRoundRect(x, y, w, h, 6)
+	gfx.setColor(gfx.kColorBlack)
+	gfx.drawRoundRect(x, y, w, h, 6)
+	gfx.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5)
+	drawText(fonts.big, tostring(total), TRAY_CX, y + 5, "center")
+	if note then
+		if hot then
+			drawPill(note, TRAY_CX, y + 38)
+		else
+			drawText(fonts.small, fit(fonts.small, note, w - 8), TRAY_CX, y + 39, "center")
+		end
+	end
+end
+
+-- dice: list of { sides, value, kept }; bodies: matching Dice3D bodies.
+-- Bodies that have been placed in the tray draw where they are.
+local function drawDiceGrid(dice, bodies, top, bottom, result)
+	local n = #dice
+	if n == 0 then return end
+	local r, xs, ys = UI.diceLayout(n, top, bottom)
+	for i, d in ipairs(dice) do
+		local b = bodies[i]
 		local style = "normal"
 		if not d.kept then
 			style = "dropped"
 		elseif result and d.sides == 20 and result.natural == d.value and (result.crit or result.fumble) then
 			style = "hot"
 		end
-		Dice3D.draw(bodies[i], cx, cy, r, d.value, style, fonts.small)
+		Dice3D.draw(b, b.x or xs[i], b.y or ys[i], b.r or r, d.value, style, fonts.small)
 	end
 end
 
@@ -270,8 +318,9 @@ function UI.drawTray(t)
 		return
 	end
 
-	local title = row.title or row.label
-	drawText(fonts.small, fit(fonts.small, title, TRAY_W), TRAY_CX, y, "center")
+	if row.kind ~= "roll" then
+		drawText(fonts.small, fit(fonts.small, row.title or row.label, TRAY_W), TRAY_CX, y, "center")
+	end
 
 	if row.kind == "resource" then
 		local cur, max = t.getResource(row.key)
@@ -333,45 +382,27 @@ function UI.drawTray(t)
 		drawText(fonts.small, "rows below ⬇️", TRAY_CX, y + 106, "center")
 		return
 	end
-	local tag
-	if roll and roll.crit then
-		tag = "CRITICAL x2"
-	elseif not roll and t.critPending and row.critable then
-		tag = "CRITICAL x2"
-	elseif spec.check then
-		local mode = roll and roll.mode or t.mode
-		if mode == "adv" then tag = "ADVANTAGE" elseif mode == "dis" then tag = "DISADVANTAGE" end
-	end
-	if tag then
-		drawPill(tag, TRAY_CX, y + 15)
-	else
-		drawText(fonts.small, Dice.format(spec), TRAY_CX, y + 16, "center")
-	end
-
-	local diceTop, diceBottom = y + 32, y + 120
+	local hintY = UI.DICE_BOTTOM + 2
+	drawTrayBox()
 	if not roll then
-		drawDiceGrid(t.preview.dice, t.preview.bodies, diceTop, diceBottom)
-		if row.detail then
-			drawText(fonts.small, fit(fonts.small, row.detail, TRAY_W), TRAY_CX, y + 128, "center")
-		end
+		drawDiceGrid(t.preview.dice, t.preview.bodies)
 		local hint = playdate.isCrankDocked() and "Press Ⓐ to roll" or "Crank to roll 🎣"
-		drawText(fonts.small, hint, TRAY_CX, y + 150, "center")
+		drawText(fonts.small, hint, TRAY_CX, hintY, "center")
 		return
 	end
 
 	if roll.phase == "tumble" then
-		drawDiceGrid(roll.faces, roll.bodies, diceTop, diceBottom)
-		drawText(fonts.small, "rolling...", TRAY_CX, y + 150, "center")
+		drawDiceGrid(roll.faces, roll.bodies)
+		drawText(fonts.small, "rolling...", TRAY_CX, hintY, "center")
 		return
 	end
 
 	local res = roll.result
 	if roll.phase == "landing" then
-		drawDiceGrid(res.dice, roll.bodies, diceTop, diceBottom)
+		drawDiceGrid(res.dice, roll.bodies)
 		return
 	end
-	drawDiceGrid(res.dice, roll.bodies, diceTop, diceBottom, res)
-	drawText(fonts.big, tostring(res.total), TRAY_CX, y + 122, "center")
+	drawDiceGrid(res.dice, roll.bodies, nil, nil, res)
 
 	local note
 	if res.crit then
@@ -383,12 +414,13 @@ function UI.drawTray(t)
 	elseif spec.bonus ~= 0 then
 		note = tostring(res.total - spec.bonus) .. " " .. (spec.bonus > 0 and "+ " or "- ") .. math.abs(spec.bonus)
 	end
-	if note then
-		if res.crit or res.fumble then
-			drawPill(note, TRAY_CX, y + 158)
-		else
-			drawText(fonts.small, note, TRAY_CX, y + 160, "center")
-		end
+	drawResultBox(res.total, note, res.crit or res.fumble)
+	if roll.crit then
+		drawText(fonts.small, "CRITICAL x2", TRAY_CX, hintY, "center")
+	elseif spec.check and roll.mode == "adv" then
+		drawText(fonts.small, "with advantage", TRAY_CX, hintY, "center")
+	elseif spec.check and roll.mode == "dis" then
+		drawText(fonts.small, "with disadvantage", TRAY_CX, hintY, "center")
 	end
 end
 

@@ -402,7 +402,11 @@ export class Game {
 
 	spinAll(amount) {
 		if (calm()) return;
-		for (const b of this.state.roll.bodies) Dice3D.spin(b, amount * (0.8 + Math.random() * 0.4));
+		for (const b of this.state.roll.bodies) {
+			const a = amount * (0.8 + Math.random() * 0.4);
+			Dice3D.spin(b, a);
+			Dice3D.toss(b, a);
+		}
 	}
 
 	startRoll(auto) {
@@ -436,11 +440,14 @@ export class Game {
 		const [spec, crit] = this.effectiveSpec(row);
 		const faces = Dice.faces(spec);
 		const preview = this.previewFor(row);
+		const { r, xs, ys } = UI.diceLayout(faces.length);
 		const bodies = faces.map((d, i) => {
 			const b = Dice3D.newBody(d.sides);
 			const last = s.roll && s.roll.row === row && s.roll.bodies[i];
 			const from = last || preview.bodies[i];
 			if (from && from.sides === d.sides) b.q = from.q;
+			if (last && last.x != null) Dice3D.place(b, last.x, last.y, r);
+			else Dice3D.place(b, xs[i], ys[i], r);
 			return b;
 		});
 		s.roll = { phase: "tumble", row, spec, crit, mode: s.mode, faces, bodies, auto: auto ? (calm() ? 1 : AUTO_FRAMES) : null };
@@ -497,7 +504,12 @@ export class Game {
 			crank.still = amount > 0.5 ? 0 : crank.still + 1;
 			if (crank.still >= REST_RELOCK) crank.restLock = false;
 		}
-		if (roll && roll.phase !== "done") for (const b of roll.bodies) Dice3D.update(b);
+		if (roll && roll.phase !== "done") {
+			const inset = UI.DICE_INSET;
+			const clack = Dice3D.step(roll.bodies, UI.DICE_LEFT + inset, UI.DICE_TOP + inset, UI.DICE_RIGHT - inset, UI.DICE_BOTTOM - inset);
+			if (clack) Sound.tick(250 + Math.random() * 150, 0.08, 0.015);
+			for (const b of roll.bodies) Dice3D.update(b);
+		}
 
 		if (roll && roll.phase === "landing") {
 			if (roll.bodies.every(Dice3D.isSettled)) this.finishLanding();
