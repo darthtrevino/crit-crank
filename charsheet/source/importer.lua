@@ -108,6 +108,8 @@ function Importer.normalize(raw)
 	end
 	for _, a in ipairs(type(raw.actions) == "table" and raw.actions or {}) do
 		if type(a) == "table" and (str(a.name) or str(a.section)) then
+			-- older files may point at a dropped feature whose id is a built-in tracker
+			if a.uses ~= nil and (type(a.uses) ~= "string" or Resources.RESERVED[a.uses]) then a.uses = nil end
 			c.actions[#c.actions + 1] = a
 		end
 	end

@@ -260,6 +260,16 @@ fn rule_text(v: &Value) -> Option<String> {
     (!out.is_empty()).then_some(out)
 }
 
+/// Resource keys the game uses for its own trackers (`Resources.RESERVED`).
+const RESERVED_IDS: [&str; 6] = [
+    "hp",
+    "hitDice",
+    "deathSaves",
+    "deathFails",
+    "inspiration",
+    "exhaustion",
+];
+
 fn camel_id(name: &str) -> String {
     let mut out = String::new();
     for (i, word) in name
@@ -280,6 +290,9 @@ fn camel_id(name: &str) -> String {
     }
     if out.is_empty() {
         "feature".into()
+    } else if RESERVED_IDS.contains(&out.as_str()) {
+        // keep clear of the game's built-in resource keys
+        out + "Feature"
     } else {
         out
     }
@@ -1228,6 +1241,8 @@ mod tests {
             "Land's Stride - Renee"
         );
         assert_eq!(camel_id("Favored Foe"), "favoredFoe");
+        assert_eq!(camel_id("Inspiration"), "inspirationFeature");
+        assert_eq!(camel_id("Hit Dice"), "hitDiceFeature");
         assert_eq!(dice_plus("1d8", -1), "1d8-1");
         assert_eq!(modifier(9), -1);
         let v = serde_json::json!({"description": "<p>Regain {{scalevalue}} hit points&nbsp;&mdash; once.</p>"});
