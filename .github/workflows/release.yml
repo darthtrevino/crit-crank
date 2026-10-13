@@ -12,10 +12,78 @@ env:
   PLAYDATE_SDK_PATH: /home/runner/PlaydateSDK
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build-charsync:
+    name: Build ${{ matrix.asset }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Static musl binary: no glibc floor, runs on any x86_64 Linux.
+          - os: ubuntu-latest
+            asset: charsync-linux
+            targets: x86_64-unknown-linux-musl
+          # Universal binary for both Apple Silicon and Intel Macs.
+          - os: macos-latest
+            asset: charsync-macos
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - os: windows-latest
+            asset: charsync-windows.exe
+            targets: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: charsync
+        shell: bash
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.targets }}
+      - name: Install musl toolchain
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -yq musl-tools
+      - name: Build
+        run: |
+          IFS=, read -ra targets <<< "${{ matrix.targets }}"
+          for target in "${targets[@]}"; do
+            cargo build --release --locked --target "$target"
+          done
+      - name: Prepare release binary
+        run: |
+          mkdir -p ../dist
+          out="../dist/${{ matrix.asset }}"
+          case "${{ runner.os }}" in
+            macOS)
+              lipo -create -output "$out" \
+                target/aarch64-apple-darwin/release/charsync \
+                target/x86_64-apple-darwin/release/charsync
+              lipo -info "$out"
+              ;;
+            Windows)
+              cp "target/${{ matrix.targets }}/release/charsync.exe" "$out"
+              ;;
+            *)
+              cp "target/${{ matrix.targets }}/release/charsync" "$out"
+              file "$out"
+              ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build-charsync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4.1.3
+        with:
+          path: dist
+          merge-multiple: true
       - name: Cache Playdate SDK
         id: sdk-cache
         uses: actions/cache@v4
@@ -43,4 +111,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" crit-crank.pdx.zip \
+            dist/charsync-linux dist/charsync-macos dist/charsync-windows.exe \
             --title "Crit Crank $GITHUB_REF_NAME" --generate-notes --verify-tag
